@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const MAX_SECONDS = 60;
 const MIN_DURATION_MS = 1000;
 
 const MIME_CANDIDATES = [
@@ -31,7 +30,7 @@ function describeMicError(error) {
 }
 
 /** Captures a single microphone clip and exposes it as a Blob plus object URL. */
-export function useVoiceRecorder(maxSeconds = MAX_SECONDS) {
+export function useVoiceRecorder() {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState(null);
   const [seconds, setSeconds] = useState(0);
@@ -134,18 +133,14 @@ export function useVoiceRecorder(maxSeconds = MAX_SECONDS) {
       setStatus("recording");
 
       timerRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
-        setSeconds(elapsed);
-        if (elapsed >= maxSeconds && recorderRef.current?.state === "recording") {
-          recorderRef.current.stop();
-        }
+        setSeconds(Math.floor((Date.now() - startedAtRef.current) / 1000));
       }, 250);
     } catch (captureError) {
       releaseStream();
       setError(describeMicError(captureError));
       setStatus("error");
     }
-  }, [maxSeconds, releaseClipUrl, releaseStream, teardown]);
+  }, [releaseClipUrl, releaseStream, teardown]);
 
   const stop = useCallback(() => {
     if (recorderRef.current?.state === "recording") recorderRef.current.stop();
@@ -185,5 +180,5 @@ export function useVoiceRecorder(maxSeconds = MAX_SECONDS) {
     [teardown]
   );
 
-  return { status, error, seconds, clip, maxSeconds, start, stop, cancel, reset };
+  return { status, error, seconds, clip, start, stop, cancel, reset };
 }

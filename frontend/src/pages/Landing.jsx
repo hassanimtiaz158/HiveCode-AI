@@ -12,7 +12,7 @@ const BENEFITS = [
 const STEPS = [
   {
     title: "Speak your brief",
-    body: "Record up to 60 seconds. No forms, no technical jargon.",
+    body: "Speak naturally and tap Stop when you're done. No forms, no technical jargon.",
   },
   {
     title: "Confirm the transcript",

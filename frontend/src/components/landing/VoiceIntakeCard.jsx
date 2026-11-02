@@ -116,9 +116,6 @@ export function VoiceIntakeCard({ onConfirm }) {
           <p aria-live="polite" className="font-mono text-3xl font-semibold text-white">
             {formatTime(recorder.seconds)}
           </p>
-          <p className="text-sm text-slate-400">
-            Listening... up to {formatTime(recorder.maxSeconds)}
-          </p>
           <div className="flex items-center gap-4">
             <button
               className="btn-primary w-auto px-6"
@@ -269,8 +266,8 @@ export function VoiceIntakeCard({ onConfirm }) {
         </span>
         <h2 className="mt-4 text-2xl font-semibold text-white">Tell us what to build</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-400">
-          Speak for up to one minute. We&apos;ll turn it into a brief you can edit before the agents
-          start.
+          Speak for as long as you need. We&apos;ll turn it into a brief you can edit before the
+          agents start.
         </p>
       </header>
 
