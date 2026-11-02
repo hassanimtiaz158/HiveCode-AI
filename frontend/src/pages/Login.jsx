@@ -1,5 +1,5 @@
 import { KeyRound, Mail } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthAlert } from "../components/AuthAlert";
 import { AuthButton } from "../components/AuthButton";
 import { AuthCheckbox } from "../components/AuthCheckbox";
@@ -12,6 +12,7 @@ import { validateEmail, validatePassword } from "../utils/validation";
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const setUser = useAuth((state) => state.setUser);
   const setPendingEmail = useAuth((state) => state.setPendingEmail);
 
@@ -40,7 +41,7 @@ export function Login() {
           remember: Boolean(fields.remember),
         });
         setUser(user);
-        navigate("/", { replace: true });
+        navigate(location.state?.from || "/dashboard", { replace: true });
       } catch (error) {
         // A 403 means the account exists but hasn't confirmed its email yet.
         if (isUnverifiedError(error)) {
