@@ -35,6 +35,7 @@ describe("VoiceIntakeCard microphone flow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /confirm & continue/i }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledWith(expect.stringMatching(/leather goods shop/i));
   }, 15000);
 
   it("warns about a silent recording and blocks transcription", async () => {

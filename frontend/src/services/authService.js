@@ -78,6 +78,14 @@ export function isUnverifiedError(error) {
   return error instanceof ApiError && error.status === 403;
 }
 
+/** True when the auth API is missing, down or failing, so local sign-in can stand in. */
+export function isAuthServiceUnavailable(error) {
+  if (error instanceof ApiError) {
+    return error.status === 404 || error.status === 405 || error.status >= 500;
+  }
+  return error instanceof TypeError;
+}
+
 export function toAuthErrorMessage(error, fallback = GENERIC_LOGIN_ERROR) {
   if (error instanceof ApiError) {
     switch (error.status) {

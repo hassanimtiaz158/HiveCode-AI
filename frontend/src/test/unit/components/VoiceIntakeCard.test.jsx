@@ -144,6 +144,7 @@ describe("VoiceIntakeCard unit", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Confirm & continue" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledWith("A salon site with bookings.");
   });
 
   it("reports a transcription failure and stays on the recording", async () => {

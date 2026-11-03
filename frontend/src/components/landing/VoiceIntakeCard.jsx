@@ -68,7 +68,8 @@ export function VoiceIntakeCard({ onConfirm }) {
   }
 
   function confirmBrief() {
-    if (transcript.trim()) onConfirm();
+    const value = transcript.trim();
+    if (value) onConfirm(value);
   }
 
   function renderVoiceCapture() {

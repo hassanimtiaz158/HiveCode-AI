@@ -13,10 +13,10 @@ export function makeQueryClient() {
   });
 }
 
-export function renderApp({ route = "/", user = null, pendingEmail = null } = {}) {
+export function renderApp({ route = "/", user = null, pendingEmail = null, status } = {}) {
   useAuth.setState({
     user,
-    status: user ? "authenticated" : "idle",
+    status: status ?? (user ? "authenticated" : "anonymous"),
     pendingEmail,
   });
 

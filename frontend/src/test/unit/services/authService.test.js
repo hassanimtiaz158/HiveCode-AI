@@ -9,6 +9,7 @@ import { ApiError, api } from "../../../services/api";
 import {
   fetchCurrentUser,
   forgotPassword,
+  isAuthServiceUnavailable,
   isUnverifiedError,
   resetPassword,
   resendVerificationCode,
@@ -113,6 +114,24 @@ describe("isUnverifiedError()", () => {
     expect(isUnverifiedError(new ApiError(401, "nope"))).toBe(false);
     expect(isUnverifiedError(new Error("403"))).toBe(false);
     expect(isUnverifiedError(undefined)).toBe(false);
+  });
+});
+
+describe("isAuthServiceUnavailable()", () => {
+  it("is true for network failures and missing or failing endpoints", () => {
+    expect(isAuthServiceUnavailable(new TypeError("Failed to fetch"))).toBe(true);
+    expect(isAuthServiceUnavailable(new ApiError(404, "missing"))).toBe(true);
+    expect(isAuthServiceUnavailable(new ApiError(405, "missing"))).toBe(true);
+    expect(isAuthServiceUnavailable(new ApiError(500, "boom"))).toBe(true);
+    expect(isAuthServiceUnavailable(new ApiError(503, "boom"))).toBe(true);
+  });
+
+  it("is false for credential and validation failures", () => {
+    expect(isAuthServiceUnavailable(new ApiError(401, "bad"))).toBe(false);
+    expect(isAuthServiceUnavailable(new ApiError(403, "verify"))).toBe(false);
+    expect(isAuthServiceUnavailable(new ApiError(422, "invalid"))).toBe(false);
+    expect(isAuthServiceUnavailable(new Error("500"))).toBe(false);
+    expect(isAuthServiceUnavailable(undefined)).toBe(false);
   });
 });
 

@@ -9,15 +9,21 @@ describe("app routing", () => {
     expect(screen.getByRole("heading", { name: /welcome back/i })).toBeTruthy();
   });
 
-  it("shows guest navigation on the landing page", () => {
+  it("opens the sign-in page at the root", () => {
     renderApp({ route: "/" });
+
+    expect(screen.getByRole("heading", { name: /welcome back/i })).toBeTruthy();
+  });
+
+  it("shows guest navigation on the landing page", () => {
+    renderApp({ route: "/landing" });
 
     expect(screen.getByRole("link", { name: /^sign in$/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /get started/i })).toBeTruthy();
   });
 
   it("moves between public pages through the header links", () => {
-    renderApp({ route: "/" });
+    renderApp({ route: "/landing" });
 
     fireEvent.click(screen.getByRole("link", { name: /get started/i }));
     expect(screen.getByRole("heading", { name: /create your account/i })).toBeTruthy();
@@ -27,7 +33,7 @@ describe("app routing", () => {
   });
 
   it("shows dashboard navigation to a signed-in visitor", () => {
-    renderApp({ route: "/", user: { id: 1, full_name: "Ada Lovelace" } });
+    renderApp({ route: "/landing", user: { id: 1, full_name: "Ada Lovelace" } });
 
     expect(screen.getByRole("link", { name: /open dashboard/i })).toBeTruthy();
     expect(screen.queryByRole("link", { name: /get started/i })).toBeNull();
@@ -36,9 +42,9 @@ describe("app routing", () => {
     expect(screen.getByRole("heading", { name: /welcome, ada lovelace/i })).toBeTruthy();
   });
 
-  it("tells a signed-out visitor that the dashboard needs a session", () => {
+  it("redirects a signed-out visitor from the dashboard to sign in", () => {
     renderApp({ route: "/dashboard" });
 
-    expect(screen.getByRole("heading", { name: /not signed in/i })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /welcome back/i })).toBeTruthy();
   });
 });

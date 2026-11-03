@@ -12,7 +12,7 @@ function submitTextBrief(text) {
 
 describe("landing brief flow", () => {
   it("sends a signed-out visitor from a typed brief to sign in", () => {
-    renderApp({ route: "/" });
+    renderApp({ route: "/landing" });
 
     submitTextBrief("A bakery site with a menu and delivery details.");
 
@@ -25,7 +25,7 @@ describe("landing brief flow", () => {
   });
 
   it("takes an authenticated visitor straight to the dashboard", () => {
-    renderApp({ route: "/", user: { id: 1, full_name: "Ada Lovelace" } });
+    renderApp({ route: "/landing", user: { id: 1, full_name: "Ada Lovelace" } });
 
     submitTextBrief("A salon page with prices and WhatsApp booking.");
     fireEvent.click(screen.getByRole("button", { name: /confirm & continue/i }));
@@ -34,7 +34,7 @@ describe("landing brief flow", () => {
   });
 
   it("keeps Continue disabled until the brief has content", () => {
-    renderApp({ route: "/" });
+    renderApp({ route: "/landing" });
     fireEvent.click(screen.getByRole("button", { name: /type instead/i }));
 
     const continueButton = screen.getByRole("button", { name: /continue/i });
@@ -47,7 +47,7 @@ describe("landing brief flow", () => {
   });
 
   it("lets the visitor edit or discard the brief before confirming", () => {
-    renderApp({ route: "/" });
+    renderApp({ route: "/landing" });
     submitTextBrief("A wool shop in Multan.");
 
     fireEvent.change(screen.getByLabelText(/your brief/i), {

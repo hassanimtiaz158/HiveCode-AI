@@ -94,6 +94,24 @@ describe("login flow", () => {
     expect(screen.getByRole("heading", { name: /forgot your password/i })).toBeTruthy();
   });
 
+  it("signs in locally when the auth API is unavailable", async () => {
+    signIn.mockRejectedValueOnce(new ApiError(500, "Internal Server Error"));
+    renderApp({ route: "/login" });
+
+    fillCredentials("New.User@Example.com");
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    await screen.findByRole(
+      "heading",
+      { name: /welcome, new.user@example.com/i },
+      { timeout: 4000 },
+    );
+
+    expect(useAuth.getState().user).toEqual({ id: "local", email: "new.user@example.com" });
+    expect(useAuth.getState().status).toBe("authenticated");
+    expect(screen.getByRole("button", { name: /start voice recording/i })).toBeTruthy();
+  });
+
   it("returns to the originating route after a successful sign-in", async () => {
     signIn.mockResolvedValueOnce(USER);
     renderApp({
@@ -104,5 +122,19 @@ describe("login flow", () => {
     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     await screen.findByRole("heading", { name: /welcome, ada lovelace/i }, { timeout: 4000 });
+  });
+
+  it("sends a signed-out dashboard visitor through login and into the intake", async () => {
+    signIn.mockResolvedValueOnce(USER);
+    renderApp({ route: "/dashboard" });
+
+    expect(screen.getByRole("heading", { name: /welcome back/i })).toBeTruthy();
+
+    fillCredentials();
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    await screen.findByRole("heading", { name: /welcome, ada lovelace/i }, { timeout: 4000 });
+    expect(screen.getByRole("heading", { name: /tell us what to build/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /start voice recording/i })).toBeTruthy();
   });
 });
