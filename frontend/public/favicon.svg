@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Voice-to-Website AI">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1" />
+      <stop offset="0.55" stop-color="#8b5cf6" />
+      <stop offset="1" stop-color="#22d3ee" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#05071a" />
+  <rect x="26" y="12" width="12" height="24" rx="6" fill="url(#g)" />
+  <path
+    d="M20 30a12 12 0 0 0 24 0"
+    fill="none"
+    stroke="url(#g)"
+    stroke-width="4"
+    stroke-linecap="round"
+  />
+  <path d="M32 42v10" stroke="url(#g)" stroke-width="4" stroke-linecap="round" />
+</svg>

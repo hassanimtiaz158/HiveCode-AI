@@ -17,7 +17,7 @@ import { transcribeAudio } from "../../services/voiceService";
 const SECONDARY_BUTTON =
   "inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-5 text-sm font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60";
 
-const LEVEL_HEIGHTS = [14, 26, 38, 22, 32, 18, 28];
+const METER_WEIGHTS = [0.35, 0.55, 0.8, 1, 0.75, 0.55, 0.4];
 
 function formatTime(totalSeconds) {
   const safe = Math.max(0, Math.floor(totalSeconds));
@@ -105,17 +105,23 @@ export function VoiceIntakeCard({ onConfirm }) {
       return (
         <div className="flex flex-col items-center gap-5 py-4 text-center">
           <div aria-hidden="true" className="flex h-12 items-end gap-1.5">
-            {LEVEL_HEIGHTS.map((height, index) => (
+            {METER_WEIGHTS.map((weight, index) => (
               <span
-                className="w-1.5 animate-pulse rounded-full bg-brand-cyan"
+                className="w-1.5 rounded-full bg-brand-cyan transition-[height] duration-100"
                 key={index}
-                style={{ height: `${height}px`, animationDelay: `${index * 110}ms` }}
+                style={{ height: `${Math.max(6, Math.round(recorder.level * 40 * weight))}px` }}
               />
             ))}
           </div>
           <p aria-live="polite" className="font-mono text-3xl font-semibold text-white">
             {formatTime(recorder.seconds)}
           </p>
+          {recorder.seconds >= 3 && !recorder.heardSound ? (
+            <p aria-live="polite" className="text-xs leading-relaxed text-amber-300">
+              We&apos;re not picking up any sound. Check that your microphone isn&apos;t muted, or
+              choose a different microphone below.
+            </p>
+          ) : null}
           <div className="flex items-center gap-4">
             <button
               className="btn-primary w-auto px-6"
@@ -139,6 +145,12 @@ export function VoiceIntakeCard({ onConfirm }) {
     if (recorder.status === "recorded" && recorder.clip) {
       return (
         <div className="space-y-4">
+          {recorder.clip.silent ? (
+            <AuthAlert
+              message="This recording is silent. Check that your microphone isn't muted, then record again."
+              variant="error"
+            />
+          ) : null}
           <div className="rounded-2xl border border-white/10 bg-navy-900/60 p-4">
             <div className="mb-3 flex items-center justify-between text-sm">
               <span className="font-medium text-slate-200">Recording ready</span>
@@ -152,7 +164,12 @@ export function VoiceIntakeCard({ onConfirm }) {
             <button className={SECONDARY_BUTTON} onClick={startRecording} type="button">
               <RotateCcw className="h-4 w-4" /> Re-record
             </button>
-            <button className="btn-primary sm:flex-1" onClick={handleTranscribe} type="button">
+            <button
+              className="btn-primary sm:flex-1"
+              disabled={recorder.clip.silent}
+              onClick={handleTranscribe}
+              type="button"
+            >
               <Sparkles className="h-4 w-4" /> Transcribe
             </button>
           </div>
@@ -280,6 +297,25 @@ export function VoiceIntakeCard({ onConfirm }) {
       {phase === "transcribing" ? renderTranscribing() : null}
       {phase === "review" ? renderReview() : null}
       {phase === "capture" ? (mode === "voice" ? renderVoiceCapture() : renderTextCapture()) : null}
+
+      {phase === "capture" && mode === "voice" && recorder.devices.length > 1 ? (
+        <label className="mt-5 block text-left">
+          <span className="auth-label">Microphone</span>
+          <select
+            className="auth-field"
+            disabled={recorder.status === "requesting" || recorder.status === "recording"}
+            onChange={(event) => recorder.selectDevice(event.target.value)}
+            value={recorder.selectedDeviceId}
+          >
+            {recorder.selectedDeviceId ? null : <option value="">System default</option>}
+            {recorder.devices.map((device) => (
+              <option key={device.id} value={device.id}>
+                {device.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
 
       <p className="mt-6 flex items-start justify-center gap-1.5 text-center text-xs leading-relaxed text-slate-500">
         <Lock aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
