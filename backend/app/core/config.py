@@ -1,42 +1,48 @@
-from typing import List, Literal
+from typing import Literal
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # Checks both locations so it works from the repo root or from backend/
     model_config = SettingsConfigDict(
-        env_file=(".env", "backend/app/.env"),
-        env_file_encoding="utf-8",
+        env_file=(".env", "backend/.env"),
         extra="ignore",
     )
 
+    # Application
     env: str = "dev"  # dev | staging | production | test
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/voicetoai_db"
 
-    # JWT & Session
-    jwt_secret: str = "voicetoai_super_secret_development_key_32_characters_minimum"
+    # Database
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+    test_database_url: str = ""
+
+    # JWT & sessions
+    jwt_secret: str = ""
     jwt_algorithm: str = "HS256"
-    access_token_minutes: int = 60
-    refresh_token_days: int = 30
+    access_token_minutes: int = 15
+    refresh_token_days: int = 7
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
-    cookie_secure: bool = False  # Set to True in production with HTTPS
-    cors_origins: List[str] = ["http://localhost:5173"]
+    cookie_secure: bool = False
+    cors_origins: list[str] = ["http://localhost:5173"]
 
-    # Brevo Transactional Email Service
+    # Brevo email
     brevo_api_key: str = ""
     brevo_sender_email: str = "noreply@voicetowebsite.ai"
     brevo_sender_name: str = "Voice-to-Website AI"
 
-    # OTP Settings
-    otp_ttl_seconds: int = 60  # Matches frontend countdown (60s)
+    # OTP
+    otp_ttl_seconds: int = 60
     otp_max_attempts: int = 5
 
     @model_validator(mode="after")
-    def _require_real_secret(self):
-        if self.env in ("staging", "production") and (
-            not self.jwt_secret or len(self.jwt_secret) < 32
-        ):
-            raise ValueError("JWT_SECRET must be a random value of 32+ chars in staging/production")
+    def _validate_production(self):
+        if self.env in ("staging", "production"):
+            if len(self.jwt_secret) < 32:
+                raise ValueError("JWT_SECRET must be a random value of 32+ chars in staging/production")
+            if not self.cookie_secure:
+                raise ValueError("COOKIE_SECURE must be True in staging/production")
         return self
 
 
