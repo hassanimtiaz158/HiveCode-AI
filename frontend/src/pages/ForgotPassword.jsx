@@ -123,11 +123,15 @@ export function ForgotPassword() {
             }}
             value={code}
           />
-          <p className={`mt-1.5 text-xs font-medium ${expired ? "text-rose-300" : "text-slate-400"}`}>
-            {expired
-              ? "This code has expired. Resend a new one."
-              : `The code expires in ${expiryLeft}s.`}
-          </p>
+          {codeError ? (
+            <p className="auth-error">{codeError}</p>
+          ) : (
+            <p className={`mt-1.5 text-xs font-medium ${expired ? "text-rose-300" : "text-slate-400"}`}>
+              {expired
+                ? "This code has expired. Resend a new one."
+                : `The code expires in ${expiryLeft}s.`}
+            </p>
+          )}
         </div>
         <AuthButton disabled={expired}>Continue</AuthButton>
         <div className="flex items-center justify-between text-sm text-slate-400">

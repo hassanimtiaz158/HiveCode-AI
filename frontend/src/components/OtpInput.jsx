@@ -9,12 +9,19 @@ const LENGTH = 6;
  */
 export function OtpInput({ value = "", onChange, onComplete, error, disabled }) {
   const refs = useRef([]);
+  // Focus moves we initiate must not be undone by the onFocus snap-back, which
+  // still sees the value from before the keystroke re-rendered.
+  const programmaticFocus = useRef(false);
   const chars = value.split("");
 
   const focusBox = (index) => {
     const clamped = Math.min(Math.max(index, 0), LENGTH - 1);
-    refs.current[clamped]?.focus();
-    refs.current[clamped]?.select();
+    const node = refs.current[clamped];
+    if (!node) return;
+    programmaticFocus.current = true;
+    node.focus();
+    node.select();
+    programmaticFocus.current = false;
   };
 
   const commit = (nextChars, focusIndex) => {
@@ -82,6 +89,7 @@ export function OtpInput({ value = "", onChange, onComplete, error, disabled }) 
           name={index === 0 ? "code" : undefined}
           onChange={(event) => handleChange(index, event.target.value)}
           onFocus={() => {
+            if (programmaticFocus.current) return;
             const target = firstEmpty();
             if (index > target) focusBox(target);
           }}

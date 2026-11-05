@@ -11,7 +11,8 @@ export const AuthInput = forwardRef(function AuthInput(
   const inputType = isPassword && revealed ? "text" : type;
   const errorId = `${generatedId}-error`;
   const hintId = `${generatedId}-hint`;
-  const describedBy = [error ? errorId : undefined, hint ? hintId : undefined]
+  // The hint is hidden while an error is shown, so don't reference a missing id.
+  const describedBy = [error ? errorId : undefined, hint && !error ? hintId : undefined]
     .filter(Boolean)
     .join(" ");
   const rightPad = isPassword && trailing ? "pr-20" : isPassword || trailing ? "pr-12" : "";
