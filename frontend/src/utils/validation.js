@@ -25,7 +25,7 @@ export function validateRequiredName(value) {
 export function validatePassword(value) {
   if (!value) return "Password is required.";
   if (value.length < PASSWORD_MIN) return `Invalid Password`;
-  if (value.length > PASSWORD_MAX) return `Password must be ${PASSWORD_MAX} characters or fewer.`;
+  if (value.length > PASSWORD_MAX) return `Invalid Password`;
   return undefined;
 }
 
