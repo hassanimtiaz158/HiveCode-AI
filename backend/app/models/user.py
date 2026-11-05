@@ -25,6 +25,7 @@ class User(Base):
     phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="user", server_default="user")
     is_active: Mapped[bool] = mapped_column(sa.Boolean, default=True, server_default=sa.true())
+    is_verified: Mapped[bool] = mapped_column(sa.Boolean, default=False, server_default=sa.false(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -108,3 +109,26 @@ class RefreshToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="refresh_tokens")
+
+
+class OtpCode(Base):
+    __tablename__ = "otp_codes"
+    __table_args__ = (
+        CheckConstraint(
+            "purpose IN ('email_verification', 'password_reset', 'login_otp')",
+            name="check_otp_purpose",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid()
+    )
+    email: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(50), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

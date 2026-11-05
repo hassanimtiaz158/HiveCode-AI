@@ -1,13 +1,11 @@
 import uuid
 from typing import Optional
 
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import hash_password, verify_password
 from app.models.user import User
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
@@ -29,15 +27,17 @@ async def create_user(
     full_name: str,
     phone: Optional[str] = None,
     role: str = "user",
+    is_verified: bool = False,
 ) -> User:
     """Create and persist a new user record with hashed password."""
     user = User(
         email=email.strip().lower(),
-        hashed_password=pwd_context.hash(password),
+        hashed_password=hash_password(password),
         full_name=full_name.strip(),
         phone=phone.strip() if phone else None,
         role=role,
         is_active=True,
+        is_verified=is_verified,
     )
     db.add(user)
     await db.commit()
@@ -52,7 +52,7 @@ async def authenticate_user(
     user = await get_user_by_email(db, email)
     if not user:
         return None
-    if not pwd_context.verify(password, user.hashed_password):
+    if not verify_password(password, user.hashed_password):
         return None
     if not user.is_active:
         return None
