@@ -25,25 +25,7 @@ async def transcribe_speech_elevenlabs(
     file: UploadFile,
     language_hint: Optional[str] = None,
 ) -> TranscriptionResponse:
-    """
-    Transcribes an incoming audio recording using the ElevenLabs Scribe STT API.
-    
-    Args:
-        file: Uploaded binary audio file from client (WebM, WAV, MP3, etc.).
-        language_hint: Optional language hint ('ur', 'en', 'urd', 'eng').
-        
-    Returns:
-        TranscriptionResponse with transcribed text, language detection, and confidence.
-    """
-    # 1. Check API Key
-    if not settings.elevenlabs_api_key:
-        logger.warning("ELEVENLABS_API_KEY is not configured in .env.")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Speech-to-Text service is not configured. Please set ELEVENLABS_API_KEY in .env.",
-        )
-
-    # 2. Validate file extension / format
+    # 1. Validate file extension / format FIRST (returns 400)
     filename = file.filename or "audio.webm"
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext not in ALLOWED_EXTENSIONS:
@@ -52,7 +34,7 @@ async def transcribe_speech_elevenlabs(
             detail=f"Unsupported audio format '{ext}'. Allowed formats: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
         )
 
-    # 3. Read file contents and validate file size
+    # 2. Read file contents and validate file size FIRST (returns 400 / 413)
     audio_bytes = await file.read()
     if len(audio_bytes) < 256:
         raise HTTPException(
@@ -63,6 +45,14 @@ async def transcribe_speech_elevenlabs(
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"Audio file exceeds the maximum limit of {MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB.",
+        )
+
+    # 3. Check API Key AFTER input validation (returns 503)
+    if not settings.elevenlabs_api_key:
+        logger.warning("ELEVENLABS_API_KEY is not configured in .env.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Speech-to-Text service is not configured. Please set ELEVENLABS_API_KEY in .env.",
         )
 
     # 4. Prepare parameters for ElevenLabs
