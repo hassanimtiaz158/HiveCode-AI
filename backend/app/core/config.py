@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     otp_ttl_seconds: int = 60
     otp_max_attempts: int = 5
 
+    # ElevenLabs Speech-to-Text
+    elevenlabs_api_key: str = ""
+    elevenlabs_stt_model_id: str = "scribe_v1"
+
     @model_validator(mode="after")
     def _validate_production(self):
         if self.env in ("staging", "production"):
