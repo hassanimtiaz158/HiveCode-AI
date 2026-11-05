@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.auth import router as auth_router
 from app.core.config import settings
 
+from app.api.voice import router as voice_router
+
 app = FastAPI(
     title="Voice-to-Website AI Gateway",
     description="Enterprise Autonomous Web Generation & Human Deployment Platform",
@@ -23,7 +25,7 @@ app.add_middleware(
 
 # Register v1 routes
 app.include_router(auth_router, prefix="/api/v1")
-
+app.include_router(voice_router, prefix="/api/v1")
 
 @app.get("/healthz", summary="Health Check")
 async def healthz():
