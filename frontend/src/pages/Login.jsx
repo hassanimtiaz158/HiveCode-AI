@@ -103,12 +103,7 @@ export function Login() {
           />
 
           <div className="flex flex-wrap items-center justify-between gap-x-4">
-            <AuthCheckbox
-              checked={Boolean(values.remember)}
-              label="Remember me for 7 days"
-              name="remember"
-              onChange={(event) => setValue("remember", event.target.checked)}
-            />
+            
             <button
               className="btn-link min-h-[44px] cursor-pointer text-sm"
               onClick={() => navigate("/forgot-password")}
