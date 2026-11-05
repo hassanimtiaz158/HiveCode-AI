@@ -1,22 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mocks = vi.hoisted(() => ({ navigate: vi.fn() }));
-
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal();
-  return { ...actual, useNavigate: () => mocks.navigate };
-});
-
-vi.mock("../../../components/landing/VoiceIntakeCard", () => ({
-  VoiceIntakeCard: ({ onConfirm }) => (
-    <button onClick={onConfirm} type="button">
-      Confirm mock brief
-    </button>
-  ),
-}));
-
+import { beforeEach, describe, expect, it } from "vitest";
 import { Landing } from "../../../pages/Landing";
 import { useAuth } from "../../../store/auth";
 
@@ -29,7 +13,6 @@ function renderLanding() {
 }
 
 beforeEach(() => {
-  mocks.navigate.mockReset();
   useAuth.setState({ user: null, status: "idle", pendingEmail: null });
 });
 
@@ -60,6 +43,14 @@ describe("Landing page", () => {
       "#how",
     );
     expect(screen.getByText(/a portfolio site for a photographer/i)).toBeTruthy();
+  });
+
+  it("does not render the voice intake recorder", () => {
+    renderLanding();
+
+    expect(screen.queryByRole("button", { name: /start voice recording/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /type instead/i })).toBeNull();
+    expect(screen.queryByText(/tell us what to build/i)).toBeNull();
   });
 
   it("renders all five how-it-works steps", () => {
@@ -100,28 +91,5 @@ describe("Landing page", () => {
     expect(
       screen.getByRole("link", { name: /go to your dashboard/i }).getAttribute("href"),
     ).toBe("/dashboard");
-  });
-
-  it("sends a guest to sign in after confirming a brief", () => {
-    renderLanding();
-
-    fireEvent.click(screen.getByRole("button", { name: /confirm mock brief/i }));
-
-    expect(mocks.navigate).toHaveBeenCalledWith("/login", {
-      replace: true,
-      state: { from: "/dashboard" },
-    });
-  });
-
-  it("sends a signed-in visitor straight to the dashboard", () => {
-    useAuth.setState({ user: { id: 1 }, status: "authenticated" });
-    renderLanding();
-
-    fireEvent.click(screen.getByRole("button", { name: /confirm mock brief/i }));
-
-    expect(mocks.navigate).toHaveBeenCalledWith("/dashboard", {
-      replace: true,
-      state: undefined,
-    });
   });
 });
