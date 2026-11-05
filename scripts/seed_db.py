@@ -10,13 +10,11 @@ from datetime import datetime, timedelta, timezone
 # Add backend directory to sys.path
 sys.path.insert(0, os.path.abspath("backend"))
 
-from passlib.context import CryptContext
 from sqlalchemy import select
 
+from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
 from app.models.user import Plan, Subscription, User
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 async def seed():
@@ -95,8 +93,9 @@ async def seed():
                     full_name=u["full_name"],
                     phone=u["phone"],
                     role=u["role"],
-                    hashed_password=pwd_context.hash(u["password"]),
+                    hashed_password=hash_password(u["password"]),
                     is_active=True,
+                    is_verified=True,
                 )
                 session.add(new_user)
                 await session.flush()
