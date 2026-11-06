@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./components/RequireAuth";
+import { About } from "./pages/About";
 import { Dashboard } from "./pages/Dashboard";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { Landing } from "./pages/Landing";
 import { Login } from "./pages/Login";
+import { Pricing } from "./pages/Pricing";
+import { Privacy } from "./pages/Privacy";
 import { Signup } from "./pages/Signup";
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { useAuth } from "./store/auth";
@@ -23,8 +26,11 @@ export default function App() {
 
   return (
     <Routes>
-      <Route element={<Navigate replace to="/login" />} path="/" />
+      <Route element={<Landing />} path="/" />
       <Route element={<Landing />} path="/landing" />
+      <Route element={<About />} path="/about" />
+      <Route element={<Privacy />} path="/privacy" />
+      <Route element={<Pricing />} path="/pricing" />
       <Route
         element={
           <RequireAuth>
@@ -37,7 +43,7 @@ export default function App() {
       <Route element={<Signup />} path="/signup" />
       <Route element={<VerifyEmail />} path="/verify-email" />
       <Route element={<ForgotPassword />} path="/forgot-password" />
-      <Route element={<Navigate replace to="/login" />} path="*" />
+      <Route element={<Navigate replace to="/" />} path="*" />
     </Routes>
   );
 }

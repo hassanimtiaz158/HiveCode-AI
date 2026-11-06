@@ -89,6 +89,8 @@ export function isAuthServiceUnavailable(error) {
 export function toAuthErrorMessage(error, fallback = GENERIC_LOGIN_ERROR) {
   if (error instanceof ApiError) {
     switch (error.status) {
+      case 400:
+        return "Invalid code. Check the code and try again.";
       case 401:
         return GENERIC_LOGIN_ERROR;
       case 403:

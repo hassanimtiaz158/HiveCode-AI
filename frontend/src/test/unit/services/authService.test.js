@@ -137,6 +137,9 @@ describe("isAuthServiceUnavailable()", () => {
 
 describe("toAuthErrorMessage()", () => {
   it("maps known auth statuses to friendly copy", () => {
+    expect(toAuthErrorMessage(new ApiError(400, "Invalid or expired reset code."))).toBe(
+      "Invalid code. Check the code and try again.",
+    );
     expect(toAuthErrorMessage(new ApiError(401, "bad"))).toBe(
       "Email or password is incorrect.",
     );
