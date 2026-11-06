@@ -15,7 +15,7 @@ describe("SiteFooter", () => {
   it("renders the copyright and public links", () => {
     renderFooter();
 
-    expect(screen.getByText(new RegExp(`${new Date().getFullYear()} Voice-to-Website AI`))).toBeTruthy();
+    expect(screen.getByText(new RegExp(`${new Date().getFullYear()} HiveCode AI`))).toBeTruthy();
 
     const footerNav = within(screen.getByRole("navigation", { name: /footer/i }));
     expect(footerNav.getByRole("link", { name: /^about$/i }).getAttribute("href")).toBe("/about");

@@ -46,14 +46,14 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-white/5 bg-navy-950/80 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
         <Link
-          aria-label="Voice-to-Website AI home"
+          aria-label="HiveCode AI home"
           className="flex shrink-0 items-center gap-2.5"
           to="/"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-gradient shadow-glow">
             <Mic className="h-5 w-5 text-white" />
           </span>
-          <span className="text-base font-semibold text-white">Voice-to-Website AI</span>
+          <span className="text-base font-semibold text-white">HiveCode AI</span>
         </Link>
 
         <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">

@@ -33,7 +33,7 @@ export function About() {
             <span className="bg-brand-gradient bg-clip-text text-transparent">talk than type.</span>
           </h1>
           <p className="mt-5 text-base leading-relaxed text-slate-300 sm:text-lg">
-            Voice-to-Website AI turns a spoken description into a previewable website. Instead of
+            HiveCode AI turns a spoken description into a previewable website. Instead of
             learning a page builder, you explain what you need in your own words and review the
             brief before anything is generated.
           </p>

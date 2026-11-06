@@ -9,6 +9,7 @@ import { AuthLayout } from "../components/AuthLayout";
 import { OtpInput } from "../components/OtpInput";
 import { PasswordStrength } from "../components/PasswordStrength";
 import { useCountdown } from "../hooks/useCountdown";
+import { ApiError } from "../services/api";
 import { forgotPassword, resetPassword, toAuthErrorMessage } from "../services/authService";
 import {
   OTP_TTL_SECONDS,
@@ -19,6 +20,7 @@ import {
 } from "../utils/validation";
 
 const RESEND_COOLDOWN = 60;
+const INVALID_CODE_MESSAGE = "Invalid code. Check the code and try again.";
 
 export function ForgotPassword() {
   const navigate = useNavigate();
@@ -39,6 +41,9 @@ export function ForgotPassword() {
   const request = useMutation({
     mutationFn: (value) => forgotPassword({ email: value }),
     onSuccess: () => {
+      setCode("");
+      setCodeError(undefined);
+      reset.reset();
       startExpiry(OTP_TTL_SECONDS);
       startCooldown(RESEND_COOLDOWN);
       setStep("code");
@@ -50,6 +55,7 @@ export function ForgotPassword() {
     onSuccess: () => {
       setCode("");
       setCodeError(undefined);
+      reset.reset();
       startExpiry(OTP_TTL_SECONDS);
       startCooldown(RESEND_COOLDOWN);
     },
@@ -60,7 +66,12 @@ export function ForgotPassword() {
     onSuccess: () => setStep("done"),
   });
 
-  const serverError = request.error ?? resend.error ?? reset.error;
+  const invalidCodeError =
+    reset.error instanceof ApiError && reset.error.status === 400
+      ? INVALID_CODE_MESSAGE
+      : undefined;
+  const serverError = request.error ?? resend.error ?? (invalidCodeError ? undefined : reset.error);
+  const displayedCodeError = codeError ?? invalidCodeError;
 
   function submitEmail(event) {
     event.preventDefault();
@@ -69,21 +80,16 @@ export function ForgotPassword() {
     if (!error) request.mutate(email);
   }
 
-  function continueToPassword(event) {
+  function submitReset(event) {
     event.preventDefault();
-    const error = validateOtp(code);
-    setCodeError(error);
-    if (!error) setStep("password");
-  }
-
-  function submitPassword(event) {
-    event.preventDefault();
+    const codeValidation = validateOtp(code);
     const errors = {
       password: validatePassword(password),
       confirm: validateConfirmPassword(password, confirm),
     };
+    setCodeError(codeValidation);
     setPasswordErrors(errors);
-    if (!errors.password && !errors.confirm) reset.mutate();
+    if (!codeValidation && !errors.password && !errors.confirm) reset.mutate();
   }
 
   function renderEmailStep() {
@@ -112,19 +118,20 @@ export function ForgotPassword() {
 
   function renderCodeStep() {
     return (
-      <form className="space-y-4" noValidate onSubmit={continueToPassword}>
+      <form className="space-y-5" noValidate onSubmit={submitReset}>
         <div>
           <OtpInput
-            disabled={resend.isPending}
-            error={codeError}
+            disabled={resend.isPending || reset.isPending}
+            error={displayedCodeError}
             onChange={(value) => {
               setCode(value);
-              if (codeError) setCodeError(validateOtp(value));
+              setCodeError(validateOtp(value));
+              if (reset.error) reset.reset();
             }}
             value={code}
           />
-          {codeError ? (
-            <p className="auth-error">{codeError}</p>
+          {displayedCodeError ? (
+            <p className="auth-error">{displayedCodeError}</p>
           ) : (
             <p className={`mt-1.5 text-xs font-medium ${expired ? "text-rose-300" : "text-slate-400"}`}>
               {expired
@@ -133,11 +140,75 @@ export function ForgotPassword() {
             </p>
           )}
         </div>
-        <AuthButton disabled={expired}>Continue</AuthButton>
+
+        <div className="space-y-4 border-t border-white/5 pt-4">
+          <div>
+            <AuthInput
+              autoComplete="new-password"
+              error={passwordErrors.password}
+              icon={KeyRound}
+              label="New password"
+              name="newPassword"
+              onBlur={() =>
+                setPasswordErrors((current) => ({
+                  ...current,
+                  password: validatePassword(password),
+                }))
+              }
+              onChange={(event) => {
+                setPassword(event.target.value);
+                if (passwordErrors.password) {
+                  setPasswordErrors((current) => ({
+                    ...current,
+                    password: validatePassword(event.target.value),
+                  }));
+                }
+              }}
+              placeholder="At least 10 characters"
+              type="password"
+              value={password}
+            />
+            <PasswordStrength password={password} />
+          </div>
+          <AuthInput
+            autoComplete="new-password"
+            error={passwordErrors.confirm}
+            icon={ShieldCheck}
+            label="Confirm new password"
+            name="confirmPassword"
+            onBlur={() =>
+              setPasswordErrors((current) => ({
+                ...current,
+                confirm: validateConfirmPassword(password, confirm),
+              }))
+            }
+            onChange={(event) => {
+              setConfirm(event.target.value);
+              if (passwordErrors.confirm) {
+                setPasswordErrors((current) => ({
+                  ...current,
+                  confirm: validateConfirmPassword(password, event.target.value),
+                }));
+              }
+            }}
+            placeholder="Re-enter your new password"
+            type="password"
+            value={confirm}
+          />
+        </div>
+
+        <AuthButton disabled={expired} loading={reset.isPending}>
+          {reset.isPending ? "Resetting password..." : "Reset Password"}
+        </AuthButton>
+
         <div className="flex items-center justify-between text-sm text-slate-400">
           <button
             className="btn-link inline-flex items-center gap-1.5"
-            onClick={() => setStep("email")}
+            onClick={() => {
+              setStep("email");
+              setCodeError(undefined);
+              reset.reset();
+            }}
             type="button"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Use a different email
@@ -149,65 +220,6 @@ export function ForgotPassword() {
             type="button"
           >
             {resend.isPending ? "Sending..." : cooldownLeft > 0 ? `Resend in ${cooldownLeft}s` : "Resend code"}
-          </button>
-        </div>
-      </form>
-    );
-  }
-
-  function renderPasswordStep() {
-    return (
-      <form className="space-y-4" noValidate onSubmit={submitPassword}>
-        <div>
-          <AuthInput
-            autoComplete="new-password"
-            error={passwordErrors.password}
-            icon={KeyRound}
-            label="New password"
-            name="newPassword"
-            onBlur={() => setPasswordErrors((c) => ({ ...c, password: validatePassword(password) }))}
-            onChange={(event) => {
-              setPassword(event.target.value);
-              if (passwordErrors.password)
-                setPasswordErrors((c) => ({ ...c, password: validatePassword(event.target.value) }));
-            }}
-            placeholder="At least 10 characters"
-            type="password"
-            value={password}
-          />
-          <PasswordStrength password={password} />
-        </div>
-        <AuthInput
-          autoComplete="new-password"
-          error={passwordErrors.confirm}
-          icon={ShieldCheck}
-          label="Confirm new password"
-          name="confirmPassword"
-          onBlur={() =>
-            setPasswordErrors((c) => ({ ...c, confirm: validateConfirmPassword(password, confirm) }))
-          }
-          onChange={(event) => {
-            setConfirm(event.target.value);
-            if (passwordErrors.confirm)
-              setPasswordErrors((c) => ({
-                ...c,
-                confirm: validateConfirmPassword(password, event.target.value),
-              }));
-          }}
-          placeholder="Re-enter your new password"
-          type="password"
-          value={confirm}
-        />
-        <AuthButton loading={reset.isPending}>
-          {reset.isPending ? "Updating password..." : "Reset Password"}
-        </AuthButton>
-        <div className="text-sm">
-          <button
-            className="btn-link inline-flex items-center gap-1.5"
-            onClick={() => setStep("code")}
-            type="button"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to the code
           </button>
         </div>
       </form>
@@ -240,11 +252,7 @@ export function ForgotPassword() {
     },
     code: {
       title: "Enter the reset code",
-      subtitle: `We sent a 6-digit code to ${email}. It expires in one minute.`,
-    },
-    password: {
-      title: "Choose a new password",
-      subtitle: "Make it at least 10 characters - length matters more than symbols.",
+      subtitle: `We sent a 6-digit code to ${email}. Enter it with your new password. It expires in one minute.`,
     },
   };
   const heading = headings[step];
@@ -268,7 +276,6 @@ export function ForgotPassword() {
 
         {step === "email" ? renderEmailStep() : null}
         {step === "code" ? renderCodeStep() : null}
-        {step === "password" ? renderPasswordStep() : null}
 
         <p className="mt-6 text-center text-sm text-slate-400">
           Remembered it?{" "}

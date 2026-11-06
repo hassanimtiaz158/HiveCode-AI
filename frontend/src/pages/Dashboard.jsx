@@ -22,7 +22,7 @@ export function Dashboard() {
             <Mic className="h-5 w-5 text-white" />
           </span>
           <span className="hidden text-base font-semibold text-white sm:inline">
-            Voice-to-Website AI
+            HiveCode AI
           </span>
         </Link>
         <span className="truncate text-xs text-slate-400 sm:text-sm">

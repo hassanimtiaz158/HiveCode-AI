@@ -11,6 +11,7 @@ vi.mock("../../services/authService", async (importOriginal) => {
 });
 
 import { forgotPassword, resetPassword } from "../../services/authService";
+import { ApiError } from "../../services/api";
 import { renderApp } from "../helpers/renderApp";
 
 const EMAIL = "ada@example.com";
@@ -29,13 +30,26 @@ function pasteCode(code = "654321") {
   });
 }
 
+function fillPassword(password = PASSWORD, confirm = PASSWORD) {
+  fireEvent.change(screen.getByLabelText(/^new password$/i), {
+    target: { value: password },
+  });
+  fireEvent.change(screen.getByLabelText(/confirm new password/i), {
+    target: { value: confirm },
+  });
+}
+
+function submitReset() {
+  fireEvent.click(screen.getByRole("button", { name: /^reset password$/i }));
+}
+
 beforeEach(() => {
   forgotPassword.mockReset();
   resetPassword.mockReset();
 });
 
 describe("forgot password flow", () => {
-  it("walks email, code and password steps, then returns to sign in", async () => {
+  it("walks email and code plus password steps, then returns to sign in", async () => {
     forgotPassword.mockResolvedValue(undefined);
     resetPassword.mockResolvedValueOnce(undefined);
     renderApp({ route: "/forgot-password" });
@@ -46,16 +60,8 @@ describe("forgot password flow", () => {
     expect(screen.getByRole("button", { name: /resend in 60s/i }).disabled).toBe(true);
 
     pasteCode();
-    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
-
-    await screen.findByRole("heading", { name: /choose a new password/i }, { timeout: 4000 });
-    fireEvent.change(screen.getByLabelText(/^new password$/i), {
-      target: { value: PASSWORD },
-    });
-    fireEvent.change(screen.getByLabelText(/confirm new password/i), {
-      target: { value: PASSWORD },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
+    fillPassword();
+    submitReset();
 
     await screen.findByRole("heading", { name: /password updated/i }, { timeout: 4000 });
     expect(resetPassword).toHaveBeenCalledWith({
@@ -80,40 +86,60 @@ describe("forgot password flow", () => {
     expect(forgotPassword).not.toHaveBeenCalled();
   });
 
-  it("requires a complete code before showing the password step", () => {
+  it("requires a complete code before resetting", async () => {
     forgotPassword.mockResolvedValue(undefined);
     renderApp({ route: "/forgot-password" });
 
     requestCode();
-    return screen.findByRole("heading", { name: /enter the reset code/i }, { timeout: 4000 }).then(() => {
-      fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
-      expect(screen.getByText(/enter the 6-digit code/i)).toBeTruthy();
-      expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
-      expect(resetPassword).not.toHaveBeenCalled();
-    });
+    await screen.findByRole("heading", { name: /enter the reset code/i }, { timeout: 4000 });
+
+    fillPassword();
+    submitReset();
+
+    expect(screen.getByText(/enter the 6-digit code from your email/i)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
+    expect(resetPassword).not.toHaveBeenCalled();
   });
 
-  it("blocks mismatched passwords and keeps the form on screen", async () => {
+  it("blocks mismatched passwords and keeps the reset form on screen", async () => {
     forgotPassword.mockResolvedValue(undefined);
     renderApp({ route: "/forgot-password" });
 
     requestCode();
     await screen.findByRole("heading", { name: /enter the reset code/i }, { timeout: 4000 });
     pasteCode();
-    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
-    await screen.findByRole("heading", { name: /choose a new password/i }, { timeout: 4000 });
-
-    fireEvent.change(screen.getByLabelText(/^new password$/i), {
-      target: { value: PASSWORD },
-    });
-    fireEvent.change(screen.getByLabelText(/confirm new password/i), {
-      target: { value: "something-else" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
+    fillPassword(PASSWORD, "something-else");
+    submitReset();
 
     expect(screen.getByText(/passwords do not match/i)).toBeTruthy();
     expect(resetPassword).not.toHaveBeenCalled();
-    expect(screen.getByRole("heading", { name: /choose a new password/i })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
+  });
+
+  it("shows an invalid code on the same page instead of moving on", async () => {
+    forgotPassword.mockResolvedValue(undefined);
+    resetPassword.mockRejectedValueOnce(new ApiError(400, "Invalid or expired reset code."));
+    renderApp({ route: "/forgot-password" });
+
+    requestCode();
+    await screen.findByRole("heading", { name: /enter the reset code/i }, { timeout: 4000 });
+    pasteCode("000000");
+    fillPassword();
+    submitReset();
+
+    expect(
+      await screen.findByText(/invalid code\. check the code and try again/i, undefined, {
+        timeout: 4000,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /choose a new password/i })).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(resetPassword).toHaveBeenCalledWith({
+      email: EMAIL,
+      code: "000000",
+      password: PASSWORD,
+    });
   });
 
   it("lets the user go back to a different email", async () => {

@@ -34,6 +34,7 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 import { ForgotPassword } from "../../../pages/ForgotPassword";
+import { ApiError } from "../../../services/api";
 
 const EMAIL = "ada@example.com";
 const PASSWORD = "NewStr0ngPassphrase!";
@@ -60,12 +61,6 @@ function pasteCode(code = "654321") {
   });
 }
 
-function moveToPasswordStep() {
-  moveToCodeStep();
-  pasteCode();
-  fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
-}
-
 function fillPassword(password = PASSWORD, confirm = PASSWORD) {
   fireEvent.change(screen.getByLabelText(/^new password$/i), {
     target: { value: password },
@@ -73,7 +68,10 @@ function fillPassword(password = PASSWORD, confirm = PASSWORD) {
   fireEvent.change(screen.getByLabelText(/confirm new password/i), {
     target: { value: confirm },
   });
-  fireEvent.submit(screen.getByLabelText(/^new password$/i).closest("form"));
+}
+
+function submitReset() {
+  fireEvent.click(screen.getByRole("button", { name: /^reset password$/i }));
 }
 
 beforeEach(() => {
@@ -140,19 +138,23 @@ describe("ForgotPassword page", () => {
   it("shows the code validation message on the code step", () => {
     renderForgotPassword();
     moveToCodeStep();
+    fillPassword();
 
-    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
+    submitReset();
 
     expect(screen.getByText(/enter the 6-digit code from your email/i)).toBeTruthy();
     expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
+    expect(mocks.mutations[2].mutate).not.toHaveBeenCalled();
   });
 
-  it("advances to the password step with a complete code", () => {
+  it("shows the new password fields on the same code step", () => {
     renderForgotPassword();
-    moveToPasswordStep();
+    moveToCodeStep();
 
-    expect(screen.getByRole("heading", { name: /choose a new password/i })).toBeTruthy();
-    expect(screen.getByText(/make it at least 10 characters/i)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
+    expect(screen.getByLabelText(/^new password$/i)).toBeTruthy();
+    expect(screen.getByLabelText(/confirm new password/i)).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /choose a new password/i })).toBeNull();
   });
 
   it("disables resending while the resend is in flight", () => {
@@ -165,20 +167,24 @@ describe("ForgotPassword page", () => {
 
   it("blocks mismatched passwords before resetting", () => {
     renderForgotPassword();
-    moveToPasswordStep();
-
+    moveToCodeStep();
+    pasteCode();
     fillPassword(PASSWORD, "different-password");
+
+    submitReset();
 
     expect(screen.getByText(/passwords do not match/i)).toBeTruthy();
     expect(mocks.mutations[2].mutate).not.toHaveBeenCalled();
-    expect(screen.getByRole("heading", { name: /choose a new password/i })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
   });
 
   it("submits the reset and shows the confirmation screen", () => {
     renderForgotPassword();
-    moveToPasswordStep();
-
+    moveToCodeStep();
+    pasteCode();
     fillPassword();
+
+    submitReset();
 
     expect(mocks.mutations[2].mutate).toHaveBeenCalledTimes(1);
 
@@ -193,11 +199,22 @@ describe("ForgotPassword page", () => {
   it("disables the reset button while the password is updating", () => {
     mocks.initial[2] = { isPending: true };
     renderForgotPassword();
-    moveToPasswordStep();
+    moveToCodeStep();
 
-    const button = screen.getByRole("button", { name: /updating password/i });
+    const button = screen.getByRole("button", { name: /resetting password/i });
     expect(button.disabled).toBe(true);
     expect(button.getAttribute("aria-busy")).toBe("true");
+  });
+
+  it("shows an invalid code inline and stays on the code step", () => {
+    mocks.initial[2] = { error: new ApiError(400, "Invalid or expired reset code.") };
+    renderForgotPassword();
+    moveToCodeStep();
+
+    expect(screen.getByText(/invalid code\. check the code and try again/i)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /choose a new password/i })).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("can go back to the email step", () => {
@@ -208,14 +225,5 @@ describe("ForgotPassword page", () => {
 
     expect(screen.getByRole("heading", { name: /forgot your password/i })).toBeTruthy();
     expect(screen.getByLabelText(/email address/i).value).toBe(EMAIL);
-  });
-
-  it("can go back from the password step to the code step", () => {
-    renderForgotPassword();
-    moveToPasswordStep();
-
-    fireEvent.click(screen.getByRole("button", { name: /back to the code/i }));
-
-    expect(screen.getByRole("heading", { name: /enter the reset code/i })).toBeTruthy();
   });
 });

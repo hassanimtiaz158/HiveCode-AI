@@ -31,7 +31,7 @@ describe("SiteHeader", () => {
 
     expect(screen.getByRole("link", { name: /^login$/i }).getAttribute("href")).toBe("/login");
     expect(screen.getByRole("link", { name: /^sign up$/i }).getAttribute("href")).toBe("/signup");
-    expect(screen.getByRole("link", { name: /voice-to-website ai home/i }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: /hivecode ai home/i }).getAttribute("href")).toBe(
       "/",
     );
   });
