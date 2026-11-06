@@ -1,10 +1,13 @@
+import json
 import logging
+import time
+from datetime import datetime, timezone
 from typing import Optional
 import httpx
 
 from app.core.config import settings
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("app.services.email")
 
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
@@ -15,10 +18,16 @@ async def send_brevo_email(
     subject: str,
     html_content: str,
 ) -> bool:
-    """Send a transactional email via Brevo REST API using httpx."""
+    """Send a transactional email via Brevo REST API using httpx with observability logging."""
+    start_time = time.perf_counter()
+
     if not settings.brevo_api_key:
         logger.info(
-            f"[MOCK EMAIL - BREVO_API_KEY NOT SET] To: {to_email} | Subject: {subject}"
+            "[EMAIL-OBSERVABILITY] 📨 MOCK EMAIL DISPATCHED\n"
+            f"  Recipient : {to_email} ({to_name})\n"
+            f"  Subject   : {subject}\n"
+            f"  Mode      : LOCAL_DEV (BREVO_API_KEY is not configured)\n"
+            f"  Timestamp : {datetime.now(timezone.utc).isoformat()}"
         )
         return True
 
@@ -38,19 +47,51 @@ async def send_brevo_email(
         "htmlContent": html_content,
     }
 
+    logger.info(
+        f"[EMAIL-OBSERVABILITY] 🚀 Initiating Brevo dispatch -> Recipient: {to_email} | Subject: '{subject}'"
+    )
+
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             response = await client.post(BREVO_API_URL, headers=headers, json=payload)
+            latency_ms = (time.perf_counter() - start_time) * 1000
+
             if response.status_code in (200, 201, 202):
-                logger.info(f"Brevo email dispatched to {to_email}")
+                msg_id = ""
+                try:
+                    resp_data = response.json()
+                    msg_id = resp_data.get("messageId", "")
+                except Exception:
+                    pass
+
+                logger.info(
+                    "[EMAIL-OBSERVABILITY] ✅ Brevo email dispatched successfully!\n"
+                    f"  Recipient  : {to_email}\n"
+                    f"  StatusCode : {response.status_code}\n"
+                    f"  Latency    : {latency_ms:.2f}ms\n"
+                    f"  MessageId  : {msg_id or 'N/A'}\n"
+                    f"  Timestamp  : {datetime.now(timezone.utc).isoformat()}"
+                )
                 return True
             else:
                 logger.error(
-                    f"Brevo API error {response.status_code}: {response.text}"
+                    "[EMAIL-OBSERVABILITY] ❌ Brevo email dispatch failed!\n"
+                    f"  Recipient  : {to_email}\n"
+                    f"  StatusCode : {response.status_code}\n"
+                    f"  Latency    : {latency_ms:.2f}ms\n"
+                    f"  ErrorBody  : {response.text}\n"
+                    f"  Timestamp  : {datetime.now(timezone.utc).isoformat()}"
                 )
                 return False
         except Exception as exc:
-            logger.error(f"Failed to connect to Brevo API: {exc}")
+            latency_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "[EMAIL-OBSERVABILITY] 💥 Connection error during Brevo email dispatch!\n"
+                f"  Recipient  : {to_email}\n"
+                f"  Latency    : {latency_ms:.2f}ms\n"
+                f"  Exception  : {str(exc)}\n"
+                f"  Timestamp  : {datetime.now(timezone.utc).isoformat()}"
+            )
             return False
 
 

@@ -1,8 +1,17 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
 from app.core.config import settings
+
+from app.api.voice import router as voice_router
+
+# Configure structured logging for observability
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 app = FastAPI(
     title="Voice-to-Website AI Gateway",
@@ -23,7 +32,7 @@ app.add_middleware(
 
 # Register v1 routes
 app.include_router(auth_router, prefix="/api/v1")
-
+app.include_router(voice_router, prefix="/api/v1")
 
 @app.get("/healthz", summary="Health Check")
 async def healthz():
