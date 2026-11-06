@@ -34,6 +34,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(voice_router, prefix="/api/v1")
 
+@app.get("/health", summary="Health Check")
 @app.get("/healthz", summary="Health Check")
 async def healthz():
     """Health check endpoint returning system status."""
