@@ -1,17 +1,23 @@
 import { KeyRound, Mail } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthAlert } from "../components/AuthAlert";
 import { AuthButton } from "../components/AuthButton";
 import { AuthCheckbox } from "../components/AuthCheckbox";
 import { AuthInput } from "../components/AuthInput";
 import { AuthLayout } from "../components/AuthLayout";
 import { useAuthForm } from "../hooks/useAuthForm";
-import { isUnverifiedError, signIn, toAuthErrorMessage } from "../services/authService";
+import {
+  isAuthServiceUnavailable,
+  isUnverifiedError,
+  signIn,
+  toAuthErrorMessage,
+} from "../services/authService";
 import { useAuth } from "../store/auth";
 import { validateEmail, validatePassword } from "../utils/validation";
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const setUser = useAuth((state) => state.setUser);
   const setPendingEmail = useAuth((state) => state.setPendingEmail);
 
@@ -32,7 +38,7 @@ export function Login() {
       password: (value) => validatePassword(String(value)),
     },
     onSubmit: async (fields) => {
-      const email = String(fields.email);
+      const email = String(fields.email).trim().toLowerCase();
       try {
         const user = await signIn({
           email,
@@ -40,16 +46,18 @@ export function Login() {
           remember: Boolean(fields.remember),
         });
         setUser(user);
-        navigate("/", { replace: true });
       } catch (error) {
         // A 403 means the account exists but hasn't confirmed its email yet.
         if (isUnverifiedError(error)) {
-          setPendingEmail(email.trim().toLowerCase());
+          setPendingEmail(email);
           navigate("/verify-email", { replace: true });
           return;
         }
-        throw error;
+        // Until the auth API ships, a form-valid credential signs in locally.
+        if (!isAuthServiceUnavailable(error)) throw error;
+        setUser({ id: "local", email });
       }
+      navigate(location.state?.from || "/dashboard", { replace: true });
     },
   });
 
