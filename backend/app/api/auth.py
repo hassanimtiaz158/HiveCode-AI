@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -29,6 +30,7 @@ from app.schemas.auth import (
 from app.services.email_service import get_otp_email_template, send_brevo_email
 from app.services.otp_service import create_otp, verify_otp
 
+logger = logging.getLogger("app.api.auth")
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
@@ -74,16 +76,17 @@ def clear_auth_cookies(response: Response):
 async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     """Register a new user and dispatch a 6-digit verification code via Brevo."""
     email = body.email.strip().lower()
+    logger.info(f"[AUTH-OBSERVABILITY] 👤 Signup request received for '{email}'")
 
     stmt = select(User).where(User.email == email)
     existing = (await db.execute(stmt)).scalar_one_or_none()
 
     if existing:
         if existing.is_verified:
-            # Generic success response to prevent email enumeration
+            logger.info(f"[AUTH-OBSERVABILITY] ℹ️ Existing verified account for '{email}', generic response returned")
             return {"message": "Verification code dispatched"}
         else:
-            # Resend verification code for existing unverified user
+            logger.info(f"[AUTH-OBSERVABILITY] ℹ️ Existing unverified account for '{email}', resending OTP")
             code = await create_otp(db, email=email, purpose="email_verification")
             await send_brevo_email(
                 to_email=email,
@@ -130,8 +133,11 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
 async def verify_email_route(body: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
     """Verify account email with a 6-digit OTP."""
     email = body.email.strip().lower()
+    logger.info(f"[AUTH-OBSERVABILITY] 📧 Email verification attempt for '{email}'")
+
     valid = await verify_otp(db, email=email, code=body.code, purpose="email_verification")
     if not valid:
+        logger.warning(f"[AUTH-OBSERVABILITY] ❌ Verification failed for '{email}' (invalid/expired code)")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired verification code.",
@@ -142,6 +148,7 @@ async def verify_email_route(body: VerifyEmailRequest, db: AsyncSession = Depend
     if user:
         user.is_verified = True
         await db.commit()
+        logger.info(f"[AUTH-OBSERVABILITY] ✅ Account '{email}' successfully marked verified")
 
     return {"message": "Email successfully verified"}
 
@@ -153,6 +160,8 @@ async def verify_email_route(body: VerifyEmailRequest, db: AsyncSession = Depend
 async def resend_code(body: ResendCodeRequest, db: AsyncSession = Depends(get_db)):
     """Dispatch a fresh 6-digit verification code."""
     email = body.email.strip().lower()
+    logger.info(f"[AUTH-OBSERVABILITY] 🔄 Resend verification code requested for '{email}'")
+
     stmt = select(User).where(User.email == email)
     user = (await db.execute(stmt)).scalar_one_or_none()
 
@@ -183,16 +192,20 @@ async def login(
 ):
     """Authenticate credentials and establish JWT session cookies."""
     email = body.email.strip().lower()
+    logger.info(f"[AUTH-OBSERVABILITY] 🔐 Login request for '{email}'")
+
     stmt = select(User).where(User.email == email)
     user = (await db.execute(stmt)).scalar_one_or_none()
 
     if not user or not verify_password(body.password, user.hashed_password):
+        logger.warning(f"[AUTH-OBSERVABILITY] 🚫 Invalid credentials for '{email}'")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email or password is incorrect.",
         )
 
     if not user.is_active:
+        logger.warning(f"[AUTH-OBSERVABILITY] 🛑 Inactive user login blocked for '{email}'")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is disabled. Please contact support.",
@@ -200,6 +213,7 @@ async def login(
 
     # 403 triggers frontend redirect to /verify-email
     if not user.is_verified:
+        logger.info(f"[AUTH-OBSERVABILITY] ⏳ Unverified user login blocked for '{email}' -> dispatching OTP")
         code = await create_otp(db, email=email, purpose="email_verification")
         await send_brevo_email(
             to_email=email,
@@ -237,6 +251,7 @@ async def login(
     await db.commit()
 
     set_auth_cookies(response, access_token, raw_refresh, body.remember_me)
+    logger.info(f"[AUTH-OBSERVABILITY] ✨ Login successful for '{email}' (User UUID: {user.id})")
 
     return LoginResponse(
         user=UserOut(
@@ -263,6 +278,8 @@ async def forgot_password_route(
 ):
     """Initiate password reset flow with a 6-digit OTP."""
     email = body.email.strip().lower()
+    logger.info(f"[AUTH-OBSERVABILITY] ❓ Forgot password requested for '{email}'")
+
     stmt = select(User).where(User.email == email)
     user = (await db.execute(stmt)).scalar_one_or_none()
 
@@ -292,8 +309,11 @@ async def reset_password_route(
 ):
     """Verify reset OTP and update user password."""
     email = body.email.strip().lower()
+    logger.info(f"[AUTH-OBSERVABILITY] 🛡️ Reset password attempt for '{email}'")
+
     valid = await verify_otp(db, email=email, code=body.code, purpose="password_reset")
     if not valid:
+        logger.warning(f"[AUTH-OBSERVABILITY] ❌ Password reset failed for '{email}' (invalid or expired code)")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired reset code.",
@@ -309,6 +329,7 @@ async def reset_password_route(
 
     user.hashed_password = hash_password(body.password)
     await db.commit()
+    logger.info(f"[AUTH-OBSERVABILITY] 🎉 Password successfully changed for '{email}'")
     return {"message": "Password successfully updated"}
 
 
@@ -368,6 +389,7 @@ async def refresh_session(
     await db.commit()
 
     set_auth_cookies(response, new_access, new_raw_refresh, remember=True)
+    logger.info(f"[AUTH-OBSERVABILITY] 🔄 Session token rotated for user '{user.email}'")
     return {"message": "Session refreshed successfully"}
 
 
@@ -433,4 +455,5 @@ async def logout(
             await db.commit()
 
     clear_auth_cookies(response)
+    logger.info("[AUTH-OBSERVABILITY] 🚪 User logged out, session terminated")
     return {"message": "Successfully signed out."}

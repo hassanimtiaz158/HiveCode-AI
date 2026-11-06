@@ -1,13 +1,19 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# This file lives at backend/app/core/config.py
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+_REPO_ROOT = _BACKEND_DIR.parent
+
 
 class Settings(BaseSettings):
-    # Checks both locations so it works from the repo root or from backend/
+    # Absolute paths, so .env is found no matter which folder you run from.
+    # If both files exist, backend/.env overrides the repo-root .env.
     model_config = SettingsConfigDict(
-        env_file=(".env", "backend/.env"),
+        env_file=(_REPO_ROOT / ".env", _BACKEND_DIR / ".env"),
         extra="ignore",
     )
 
@@ -29,8 +35,8 @@ class Settings(BaseSettings):
 
     # Brevo email
     brevo_api_key: str = ""
-    brevo_sender_email: str = "noreply@voicetowebsite.ai"
-    brevo_sender_name: str = "Voice-to-Website AI"
+    brevo_sender_email: str = ""
+    brevo_sender_name: str = "Hivecode Ai"
 
     # OTP
     otp_ttl_seconds: int = 60
@@ -43,6 +49,8 @@ class Settings(BaseSettings):
                 raise ValueError("JWT_SECRET must be a random value of 32+ chars in staging/production")
             if not self.cookie_secure:
                 raise ValueError("COOKIE_SECURE must be True in staging/production")
+            if not self.brevo_api_key or not self.brevo_sender_email:
+                raise ValueError("BREVO_API_KEY and BREVO_SENDER_EMAIL are required in staging/production")
         return self
 
 
