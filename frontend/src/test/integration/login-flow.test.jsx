@@ -103,12 +103,13 @@ describe("login flow", () => {
 
     await screen.findByRole(
       "heading",
-      { name: /welcome, new.user@example.com/i },
+      { name: /welcome, user/i },
       { timeout: 4000 },
     );
 
     expect(useAuth.getState().user).toEqual({ id: "local", email: "new.user@example.com" });
     expect(useAuth.getState().status).toBe("authenticated");
+    expect(screen.queryByText(/new.user@example.com/i)).toBeNull();
     expect(screen.getByRole("button", { name: /start voice recording/i })).toBeTruthy();
   });
 

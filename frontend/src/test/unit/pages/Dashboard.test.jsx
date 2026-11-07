@@ -1,11 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useVoiceRecorder } from "../../../hooks/useVoiceRecorder";
 import { Dashboard } from "../../../pages/Dashboard";
+import { signOut } from "../../../services/authService";
 import { useAuth } from "../../../store/auth";
 
 vi.mock("../../../hooks/useVoiceRecorder", () => ({ useVoiceRecorder: vi.fn() }));
+vi.mock("../../../services/authService", async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, signOut: vi.fn() };
+});
 
 function idleRecorder(overrides = {}) {
   return {
@@ -28,8 +33,14 @@ function idleRecorder(overrides = {}) {
 
 function renderDashboard() {
   return render(
-    <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-      <Dashboard />
+    <MemoryRouter
+      future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      initialEntries={["/dashboard"]}
+    >
+      <Routes>
+        <Route element={<Dashboard />} path="/dashboard" />
+        <Route element={<p>Login screen</p>} path="/login" />
+      </Routes>
     </MemoryRouter>
   );
 }
@@ -40,6 +51,7 @@ function signIn(user) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  signOut.mockReset();
   useVoiceRecorder.mockReturnValue(idleRecorder());
   useAuth.setState({ user: null, status: "anonymous", pendingEmail: null });
 });
@@ -52,14 +64,30 @@ describe("Dashboard page", () => {
     expect(screen.getByRole("heading", { name: "Welcome, Ada Lovelace" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: /tell us what to build/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /start voice recording/i })).toBeTruthy();
-    expect(screen.getByText(/signed in as ada@example.com/i)).toBeTruthy();
+    expect(screen.getByText("Ada Lovelace")).toBeTruthy();
+    expect(screen.queryByText(/ada@example.com/i)).toBeNull();
   });
 
-  it("falls back to the email when no full name is stored", () => {
+  it("uses a generic name when no full name is stored", () => {
     signIn({ id: 1, email: "ada@example.com" });
     renderDashboard();
 
-    expect(screen.getByRole("heading", { name: "Welcome, ada@example.com" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Welcome, User" })).toBeTruthy();
+    expect(screen.queryByText(/ada@example.com/i)).toBeNull();
+  });
+
+  it("logs out and redirects to the login page", async () => {
+    signOut.mockResolvedValueOnce(undefined);
+    signIn({ id: 1, full_name: "Ada Lovelace", email: "ada@example.com" });
+    renderDashboard();
+
+    fireEvent.click(screen.getByRole("button", { name: /log out/i }));
+
+    await waitFor(() => expect(useAuth.getState().user).toBeNull());
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(useAuth.getState().status).toBe("anonymous");
+    expect(await screen.findByText("Login screen")).toBeTruthy();
   });
 
   it("starts recording through the shared intake card", () => {
