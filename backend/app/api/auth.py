@@ -82,23 +82,11 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     existing = (await db.execute(stmt)).scalar_one_or_none()
 
     if existing:
-        if existing.is_verified:
-            logger.info(f"[AUTH-OBSERVABILITY] ℹ️ Existing verified account for '{email}', generic response returned")
-            return {"message": "Verification code dispatched"}
-        else:
-            logger.info(f"[AUTH-OBSERVABILITY] ℹ️ Existing unverified account for '{email}', resending OTP")
-            code = await create_otp(db, email=email, purpose="email_verification")
-            await send_brevo_email(
-                to_email=email,
-                to_name=existing.full_name,
-                subject="Your 6-Digit Verification Code",
-                html_content=get_otp_email_template(
-                    code,
-                    "Verify your email",
-                    "Use this 6-digit code to activate your account on Voice-to-Website AI:",
-                ),
-            )
-            return {"message": "Verification code dispatched"}
+        logger.info(f"[AUTH-OBSERVABILITY] ℹ️ Existing account for '{email}' (verified={existing.is_verified}), returning 409 Conflict")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists. Please sign in.",
+        )
 
     user = User(
         email=email,

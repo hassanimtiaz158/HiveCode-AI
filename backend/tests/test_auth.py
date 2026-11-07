@@ -215,3 +215,50 @@ async def test_rate_limiting():
         )
         assert throttled_res.status_code == 429
         assert "too many attempts" in throttled_res.json()["detail"].lower()
+
+
+@pytest.mark.anyio
+async def test_signup_already_verified_returns_409():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        unique_email = f"verified_{uuid.uuid4().hex[:8]}@example.com"
+        signup_payload = {
+            "email": unique_email,
+            "full_name": "Already Verified",
+            "password": "Password123!",
+        }
+        # First signup
+        res1 = await client.post("/api/v1/auth/signup", json=signup_payload)
+        assert res1.status_code == 201
+
+        # Mark user verified in DB
+        async with AsyncSessionLocal() as session:
+            stmt = select(User).where(User.email == unique_email)
+            user = (await session.execute(stmt)).scalar_one()
+            user.is_verified = True
+            await session.commit()
+
+        # Attempt to sign up again with the verified email
+        res2 = await client.post("/api/v1/auth/signup", json=signup_payload)
+        assert res2.status_code == 409
+        assert "already exists" in res2.json()["detail"].lower()
+
+
+@pytest.mark.anyio
+async def test_signup_unverified_also_returns_409():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        unique_email = f"unverified_{uuid.uuid4().hex[:8]}@example.com"
+        signup_payload = {
+            "email": unique_email,
+            "full_name": "Unverified User",
+            "password": "Password123!",
+        }
+        # First signup succeeds
+        res1 = await client.post("/api/v1/auth/signup", json=signup_payload)
+        assert res1.status_code == 201
+
+        # Second signup attempt with the same unverified email returns 409 Conflict
+        res2 = await client.post("/api/v1/auth/signup", json=signup_payload)
+        assert res2.status_code == 409
+        assert "already exists" in res2.json()["detail"].lower()
