@@ -11,6 +11,16 @@ import {
   Wand2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  AwarenessSection,
+  ContactSection,
+  FaqSection,
+  GuidelinesSection,
+  LandingSectionNav,
+  PipelineSection,
+  TunnelSection,
+  UseCasesSection,
+} from "../components/landing/LandingSections";
 import { PublicLayout } from "../components/site/PublicLayout";
 import { useAuth } from "../store/auth";
 
@@ -99,6 +109,8 @@ export function Landing() {
           </figure>
         </section>
 
+        <LandingSectionNav />
+
         <section className="scroll-mt-24 border-t border-white/5 py-14 sm:py-20" id="how">
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-brand-cyan">
@@ -136,6 +148,14 @@ export function Landing() {
             })}
           </ol>
         </section>
+
+        <PipelineSection />
+        <UseCasesSection />
+        <TunnelSection />
+        <AwarenessSection />
+        <GuidelinesSection />
+        <FaqSection />
+        <ContactSection />
 
         <section className="border-t border-white/5 py-14 sm:py-20">
           <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-navy-900/60 p-8 text-center shadow-card sm:p-12">
