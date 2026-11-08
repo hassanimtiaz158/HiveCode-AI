@@ -1,13 +1,28 @@
 import { useState } from "react";
-import { ArrowLeft, Mic, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowLeft, LogOut, Mic, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { VoiceIntakeCard } from "../components/landing/VoiceIntakeCard";
 import { useAuth } from "../store/auth";
 
 export function Dashboard() {
   const user = useAuth((state) => state.user);
+  const logout = useAuth((state) => state.logout);
+  const navigate = useNavigate();
   const [brief, setBrief] = useState("");
-  const displayName = user?.full_name || user?.email || "";
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const displayName = user?.full_name?.trim() || "User";
+
+  async function handleLogout() {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-navy-950 text-slate-200">
@@ -25,9 +40,21 @@ export function Dashboard() {
             HiveCode AI
           </span>
         </Link>
-        <span className="truncate text-xs text-slate-400 sm:text-sm">
-          Signed in as {user?.email}
-        </span>
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <span className="max-w-[9rem] truncate text-xs text-slate-400 sm:max-w-xs sm:text-sm">
+            <span className="hidden sm:inline">Signed in as </span>
+            <span className="font-medium text-slate-200">{displayName}</span>
+          </span>
+          <button
+            className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+            disabled={isLoggingOut}
+            onClick={handleLogout}
+            type="button"
+          >
+            <LogOut className="h-4 w-4" />
+            {isLoggingOut ? "Signing out..." : "Log out"}
+          </button>
+        </div>
       </header>
 
       <main className="relative z-10 mx-auto w-full max-w-4xl px-5 pb-16 sm:px-8">
