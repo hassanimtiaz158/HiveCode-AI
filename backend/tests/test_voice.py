@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from app.main import app
 
+from app.db import *
 
 @pytest.fixture(autouse=True)
 def mock_elevenlabs_env():
