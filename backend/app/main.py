@@ -6,6 +6,7 @@ from app.api.auth import router as auth_router
 from app.core.config import settings
 
 from app.api.voice import router as voice_router
+from app.api.graph import router as graph_router
 
 # Configure structured logging for observability
 logging.basicConfig(
@@ -33,6 +34,7 @@ app.add_middleware(
 # Register v1 routes
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(voice_router, prefix="/api/v1")
+app.include_router(graph_router, prefix="/api/v1")
 
 @app.get("/health", summary="Health Check")
 @app.get("/healthz", summary="Health Check")
