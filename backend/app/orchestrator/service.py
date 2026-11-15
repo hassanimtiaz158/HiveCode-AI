@@ -1,19 +1,24 @@
 import sys
 import asyncio
+import logging
 from typing import Any, Dict, Optional
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg_pool import AsyncConnectionPool
 from langgraph.types import Command
 
 from app.core.config import settings
 from app.orchestrator.graph import build_project_graph
 from app.orchestrator.state import ProjectGraphState
 
+logger = logging.getLogger(__name__)
+
 # Ensure compatible Windows event loop for psycopg
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 _cached_graph = None
+_pool = None
 
 
 def get_postgres_connection_string() -> str:
@@ -35,14 +40,17 @@ async def get_orchestrator_graph():
         return _cached_graph
 
     # Production / Dev: attach PostgreSQL checkpointer
+    global _pool
     conn_string = get_postgres_connection_string()
     try:
-        saver_cm = AsyncPostgresSaver.from_conn_string(conn_string)
-        saver = await saver_cm.__aenter__()
+        if _pool is None:
+            _pool = AsyncConnectionPool(conninfo=conn_string, max_size=10, open=False)
+            await _pool.open()
+        saver = AsyncPostgresSaver(_pool)
         await saver.setup()
         _cached_graph = build_project_graph(checkpointer=saver)
-    except Exception:
-        # Fallback to MemorySaver if DB checkpointer fails
+    except Exception as exc:
+        logger.warning(f"Failed to initialize AsyncPostgresSaver: {exc}; using MemorySaver")
         _cached_graph = build_project_graph(checkpointer=MemorySaver())
 
     return _cached_graph
@@ -83,6 +91,13 @@ async def invoke_project_graph(
     }
 
     result = await graph.ainvoke(initial_state, config=config)
+    snapshot = await graph.aget_state(config)
+    if snapshot.tasks and snapshot.tasks[0].interrupts:
+        int_val = snapshot.tasks[0].interrupts[0].value
+        if isinstance(int_val, dict):
+            result["interrupt"] = int_val
+            if "questions" in int_val:
+                result["clarification_questions"] = int_val["questions"]
     return result
 
 
@@ -95,6 +110,13 @@ async def resume_project_graph(
     config = {"configurable": {"thread_id": thread_id}}
 
     result = await graph.ainvoke(Command(resume=resume_payload), config=config)
+    snapshot = await graph.aget_state(config)
+    if snapshot.tasks and snapshot.tasks[0].interrupts:
+        int_val = snapshot.tasks[0].interrupts[0].value
+        if isinstance(int_val, dict):
+            result["interrupt"] = int_val
+            if "questions" in int_val:
+                result["clarification_questions"] = int_val["questions"]
     return result
 
 

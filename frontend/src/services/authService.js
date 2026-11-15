@@ -1,5 +1,7 @@
 import { ApiError, api } from "./api";
 
+export { ApiError };
+
 const GENERIC_LOGIN_ERROR = "Email or password is incorrect.";
 
 export function signUp(input) {
@@ -78,6 +80,11 @@ export function isUnverifiedError(error) {
   return error instanceof ApiError && error.status === 403;
 }
 
+/** True when an account already exists and is verified. */
+export function isAccountExistsError(error) {
+  return error instanceof ApiError && error.status === 409;
+}
+
 /** True when the auth API is missing, down or failing, so local sign-in can stand in. */
 export function isAuthServiceUnavailable(error) {
   if (error instanceof ApiError) {
@@ -95,6 +102,8 @@ export function toAuthErrorMessage(error, fallback = GENERIC_LOGIN_ERROR) {
         return GENERIC_LOGIN_ERROR;
       case 403:
         return "That email hasn't been verified yet. Enter the 6-digit code we sent you.";
+      case 409:
+        return error.detail || "An account with this email already exists. Please sign in.";
       case 429:
         return "Too many attempts. Please wait a few minutes before trying again.";
       case 404:

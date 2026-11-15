@@ -32,7 +32,7 @@ export function Login() {
     isSubmitting,
     serverError,
   } = useAuthForm({
-    initialValues: { email: "", password: "", remember: true },
+    initialValues: { email: location.state?.email || "", password: "", remember: true },
     validators: {
       email: (value) => validateEmail(String(value)),
       password: (value) => validatePassword(String(value)),
@@ -72,6 +72,12 @@ export function Login() {
         </header>
 
         <form className="space-y-4" noValidate onSubmit={handleSubmit} ref={formRef}>
+          {location.state?.infoMessage ? (
+            <AuthAlert
+              message={location.state.infoMessage}
+              variant={location.state.variant || "error"}
+            />
+          ) : null}
           {alert ? <AuthAlert message={alert.message} variant={alert.variant} /> : null}
           {serverError ? (
             <AuthAlert message={toAuthErrorMessage(serverError)} variant="error" />

@@ -8,7 +8,7 @@ import { AuthLayout } from "../components/AuthLayout";
 import { PasswordStrength } from "../components/PasswordStrength";
 import { PhoneInput } from "../components/PhoneInput";
 import { useAuthForm } from "../hooks/useAuthForm";
-import { signUp, toAuthErrorMessage } from "../services/authService";
+import { isAccountExistsError, signUp, toAuthErrorMessage } from "../services/authService";
 import { useAuth } from "../store/auth";
 import {
   toE164,
@@ -56,16 +56,28 @@ export function Signup() {
     },
     onSubmit: async (fields) => {
       const email = String(fields.email).trim().toLowerCase();
-      await signUp({
-        fullName: String(fields.fullName),
-        email,
-        password: String(fields.password),
-        phoneNumber: toE164(String(fields.phoneDialCode), String(fields.phoneNumber)),
-      });
-      // The API always answers with the same generic line, so a taken email
-      // stays private. Move on to the verification step either way.
-      setPendingEmail(email);
-      navigate("/verify-email", { replace: true });
+      try {
+        await signUp({
+          fullName: String(fields.fullName),
+          email,
+          password: String(fields.password),
+          phoneNumber: toE164(String(fields.phoneDialCode), String(fields.phoneNumber)),
+        });
+        setPendingEmail(email);
+        navigate("/verify-email", { replace: true });
+      } catch (error) {
+        if (isAccountExistsError(error)) {
+          navigate("/login", {
+            replace: true,
+            state: {
+              email,
+              infoMessage: "An account with this email already exists. Please sign in.",
+            },
+          });
+          return;
+        }
+        throw error;
+      }
     },
     invalidMessage: "Please check the highlighted fields before creating your account.",
   });

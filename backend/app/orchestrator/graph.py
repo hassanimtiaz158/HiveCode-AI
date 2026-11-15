@@ -3,6 +3,8 @@ from typing import Any, Dict, Literal
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
+from app.agents.clarifier import run_clarifier_turn
+from app.agents.router import route_intent
 from app.orchestrator.state import ProjectGraphState
 
 logger = logging.getLogger(__name__)
@@ -13,22 +15,16 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 async def router_node(state: ProjectGraphState) -> Dict[str, Any]:
-    """Classifies user intent into QUESTION, SMALL_EDIT, or NEW_OR_MAJOR."""
-    prompt = state.get("user_prompt", "").lower()
-    
-    # Rule-based fallback classification for Phase 7 validation
-    if any(q in prompt for q in ["how", "what is", "can i", "help", "explain"]):
-        intent = "QUESTION"
-    elif any(e in prompt for e in ["color", "button", "text", "change title", "edit", "font"]):
-        intent = "SMALL_EDIT"
-    else:
-        intent = "NEW_OR_MAJOR"
-
-    logger.info(f"RouterNode classified intent: {intent}")
+    """Classifies user intent using Router Agent (Qwen in dev, Claude in prod)."""
+    prompt = state.get("user_prompt", "")
+    routing = await route_intent(prompt)
+    logger.info(f"[ROUTER-OBSERVABILITY] Classified intent: {routing.intent} (confidence={routing.confidence})")
     return {
-        "intent": intent,
-        "router_confidence": 0.95,
-        "messages": state.get("messages", []) + [{"role": "system", "content": f"Intent routed to: {intent}"}]
+        "intent": routing.intent,
+        "router_confidence": routing.confidence,
+        "messages": state.get("messages", []) + [
+            {"role": "system", "content": f"Intent routed to: {routing.intent} ({routing.rationale})"}
+        ],
     }
 
 
@@ -48,43 +44,39 @@ async def clarifier_node(state: ProjectGraphState) -> Dict[str, Any]:
     """
     turn = state.get("clarification_turn", 0)
     answers = state.get("clarification_answers", {})
+    project_id = state.get("project_id", "default_proj")
+    user_prompt = state.get("user_prompt", "")
 
     # If turn 0 and no answers yet, trigger questions and pause for user input
     if turn == 0 and not answers:
-        questions = [
-            {
-                "id": "business_type",
-                "question": "What kind of business is this website for?",
-                "options": ["Ecommerce / Clothing Store", "Restaurant / Cafe", "Services / Consulting", "You Decide (Recommended)"]
-            },
-            {
-                "id": "primary_color",
-                "question": "Which primary brand color do you prefer?",
-                "options": ["Emerald Green (#059669)", "Royal Blue (#2563EB)", "Modern Charcoal (#1F2937)", "You Decide (Recommended)"]
-            }
-        ]
-        # PAUSE graph execution and wait for client to answer
+        result = await run_clarifier_turn(
+            project_id=project_id,
+            user_prompt=user_prompt,
+            turn=0,
+            answers=None,
+        )
         user_response = interrupt({
             "type": "clarifier_questions",
             "turn": 1,
-            "questions": questions,
+            "questions": result.questions,
         })
+        user_answers = user_response.get("answers", {}) if isinstance(user_response, dict) else {}
         return {
             "clarification_turn": 1,
-            "clarification_questions": questions,
-            "clarification_answers": user_response.get("answers", {}),
+            "clarification_questions": result.questions,
+            "clarification_answers": user_answers,
         }
 
-    # Turn complete: produce initial requirements contract
-    requirements = {
-        "business_name": answers.get("business_type", "My Online Store"),
-        "primary_color": answers.get("primary_color", "#2563EB"),
-        "pages": ["Home", "Products", "Contact"],
-        "has_whatsapp_cta": True,
-    }
+    # Turn complete or answers received: produce requirements contract and log decisions
+    result = await run_clarifier_turn(
+        project_id=project_id,
+        user_prompt=user_prompt,
+        turn=turn,
+        answers=answers,
+    )
     return {
         "clarification_turn": turn + 1,
-        "requirements": requirements,
+        "requirements": result.requirements,
     }
 
 
