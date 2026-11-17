@@ -1,0 +1,202 @@
+[
+  {
+    "id": "persona_01",
+    "name": "Tariq Mahmood",
+    "business": "Lahore Sweets & Bakers",
+    "city": "Lahore",
+    "locale": "ur",
+    "prompt": "Mujhe Lahore mein mithai aur bakery ke liye online website chahiye jahan log WhatsApp pe order kar sakein.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Food / Bakery"
+  },
+  {
+    "id": "persona_02",
+    "name": "Ayesha Khan",
+    "business": "Zari Couture",
+    "city": "Karachi",
+    "locale": "en",
+    "prompt": "I need an elegant boutique ecommerce website for luxury handcrafted bridal dresses.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Clothing / Boutique"
+  },
+  {
+    "id": "persona_03",
+    "name": "Bilal Ahmed",
+    "business": "Ahmed Auto Parts",
+    "city": "Rawalpindi",
+    "locale": "ur",
+    "prompt": "Gariyon ke spare parts ka catalog website banana hai contact details ke sath.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Automotive / Parts"
+  },
+  {
+    "id": "persona_04",
+    "name": "Dr. Sana Fatima",
+    "business": "Fatima Dental Care",
+    "city": "Islamabad",
+    "locale": "en",
+    "prompt": "Create a modern, clean dental clinic website with online appointment booking.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Healthcare / Clinic"
+  },
+  {
+    "id": "persona_05",
+    "name": "Hamza Tariq",
+    "business": "FitZone Gym",
+    "city": "Lahore",
+    "locale": "en",
+    "prompt": "Website for a 24/7 fitness club featuring membership tiers, trainer bios, and class schedules.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Fitness / Gym"
+  },
+  {
+    "id": "persona_06",
+    "name": "Mariam Qureshi",
+    "business": "Chai & Chill Cafe",
+    "city": "Peshawar",
+    "locale": "ur",
+    "prompt": "Humare traditional chai cafe ke liye menu aur location showcase karne wali website banayein.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Food / Cafe"
+  },
+  {
+    "id": "persona_07",
+    "name": "Zubair Shah",
+    "business": "Apex Real Estate",
+    "city": "Multan",
+    "locale": "en",
+    "prompt": "Property listing website showing residential plots and commercial plazas in Multan.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Real Estate"
+  },
+  {
+    "id": "persona_08",
+    "name": "Fatima Noor",
+    "business": "Glow Natural Cosmetics",
+    "city": "Faisalabad",
+    "locale": "en",
+    "prompt": "Organic skincare brand storefront with customer reviews and cash-on-delivery checkout.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Beauty / Cosmetics"
+  },
+  {
+    "id": "persona_09",
+    "name": "Usman Dar",
+    "business": "Khyber Leather Works",
+    "city": "Sialkot",
+    "locale": "en",
+    "prompt": "Export-oriented leather jackets and gloves showcase with WhatsApp RFQ inquiry.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Manufacturing / Export"
+  },
+  {
+    "id": "persona_10",
+    "name": "Sara Ali",
+    "business": "Sara Lens Photography",
+    "city": "Karachi",
+    "locale": "en",
+    "prompt": "Wedding and portrait photography portfolio with a dark aesthetic and client testimonials.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Creative / Photography"
+  },
+  {
+    "id": "persona_11",
+    "name": "Rashid Minhas",
+    "business": "Speedy Tech Repairs",
+    "city": "Gujranwala",
+    "locale": "ur",
+    "prompt": "Mobile aur laptop repair shop ki website banani hai jisme rate list ho.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Electronics Repair"
+  },
+  {
+    "id": "persona_12",
+    "name": "Nida Rehman",
+    "business": "Rehman Law Associates",
+    "city": "Lahore",
+    "locale": "en",
+    "prompt": "Corporate law firm landing page highlighting partner profiles and practice areas.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Legal / Corporate"
+  },
+  {
+    "id": "persona_13",
+    "name": "Kashif Javed",
+    "business": "Peshawari Chappal Hub",
+    "city": "Peshawar",
+    "locale": "ur",
+    "prompt": "Handmade traditional footwear ki online dukan chahiye.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Footwear / Traditional"
+  },
+  {
+    "id": "persona_14",
+    "name": "Hina Babar",
+    "business": "The Book Nook",
+    "city": "Islamabad",
+    "locale": "en",
+    "prompt": "Independent community bookstore website with monthly book club events and staff picks.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Books / Retail"
+  },
+  {
+    "id": "persona_15",
+    "name": "Omer Farooq",
+    "business": "GreenLeaf Solar Solutions",
+    "city": "Quetta",
+    "locale": "en",
+    "prompt": "Solar inverter and panel installation company website with savings calculator.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Renewable Energy"
+  },
+  {
+    "id": "persona_16",
+    "name": "Zainab Shah",
+    "business": "PetCare Veterinary Clinic",
+    "city": "Karachi",
+    "locale": "en",
+    "prompt": "Pet clinic and grooming salon page with emergency hotline and vaccine schedule.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Pet Care / Veterinary"
+  },
+  {
+    "id": "persona_17",
+    "name": "Imran Nazir",
+    "business": "Spice Junction Restaurant",
+    "city": "Lahore",
+    "locale": "ur",
+    "prompt": "Family desi restaurant ke liye online menu aur table reservation system.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Food / Restaurant"
+  },
+  {
+    "id": "persona_18",
+    "name": "Farhan Siddiqui",
+    "business": "Siddiqui Dry Fruits",
+    "city": "Quetta",
+    "locale": "ur",
+    "prompt": "Almonds, walnuts aur dry fruits bechne ke liye ecommerce store.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Dry Fruits / Retail"
+  },
+  {
+    "id": "persona_19",
+    "name": "Anum Malik",
+    "business": "CodeCraft Academy",
+    "city": "Islamabad",
+    "locale": "en",
+    "prompt": "Coding bootcamp website for kids and teens with course registration forms.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Education / Tech"
+  },
+  {
+    "id": "persona_20",
+    "name": "Babar Azam",
+    "business": "Prime Logistics & Cargo",
+    "city": "Karachi",
+    "locale": "en",
+    "prompt": "Nationwide cargo tracking and freight forwarding company corporate site.",
+    "expected_intent": "NEW_OR_MAJOR",
+    "expected_category": "Logistics / Freight"
+  }
+]

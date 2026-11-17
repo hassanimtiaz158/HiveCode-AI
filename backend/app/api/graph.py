@@ -66,3 +66,24 @@ async def get_graph_state_endpoint(project_id: str, thread_id: str):
     if not state:
         raise HTTPException(status_code=404, detail="Graph thread not found")
     return {"status": "success", "snapshot": state}
+
+class ClarifyAnswerRequest(BaseModel):
+    thread_id: Optional[str] = Field(None, description="Thread ID paused by clarifier")
+    answers: Dict[str, Any] = Field(..., description="User selected answers to questions")
+
+
+@router.post("/clarify/answer", summary="Submit Clarification Answers")
+async def clarify_answer_endpoint(project_id: str, req: ClarifyAnswerRequest):
+    """Submits answers to clarifier interview questions and resumes state graph."""
+    tid = req.thread_id or f"proj_{project_id}"
+    try:
+        result = await resume_project_graph(
+            thread_id=tid,
+            resume_payload={"answers": req.answers},
+        )
+        return {"status": "success", "state": result}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Clarifier answer submission error: {str(exc)}",
+        )

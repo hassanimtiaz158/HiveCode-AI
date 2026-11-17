@@ -1,4 +1,16 @@
+import asyncio
 import logging
+import sys
+from pathlib import Path
+
+# Ensure compatible Windows event loop for psycopg and async drivers
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+# Ensure project root is in sys.path so 'contracts' is always importable
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

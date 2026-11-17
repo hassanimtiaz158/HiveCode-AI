@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = ""
     elevenlabs_stt_model_id: str = "scribe_v1"
 
+    # LLM Configuration (Zero-code switch: Qwen in Dev <-> Claude in Prod)
+    llm_api_key: str = ""
+    anthropic_api_key: str = ""
+    qwen_api_key: str = ""
+    llm_model: str = ""
+    llm_base_url: str = "https://openrouter.ai/api/v1"
+
     @model_validator(mode="after")
     def _validate_production(self):
         if self.env in ("staging", "production"):
