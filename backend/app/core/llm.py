@@ -26,11 +26,15 @@ def get_effective_llm_config() -> Tuple[str, str, str, str]:
     # Detect provider
     if api_key.startswith("sk-ant-"):
         provider = "anthropic"
-        model = settings.llm_model if (settings.llm_model and "claude" in settings.llm_model) else "claude-3-5-haiku-20241022"
+        model = settings.llm_model if settings.llm_model else "claude-3-5-sonnet-20241022"
         base_url = "https://api.anthropic.com/v1"
+    elif api_key.startswith("gsk_") or settings.groq_api_key:
+        provider = "groq"
+        model = settings.llm_model if settings.llm_model else "llama-3.3-70b-versatile"
+        base_url = settings.llm_base_url or "https://api.groq.com/openai/v1"
     else:
         provider = "qwen"
-        model = settings.llm_model if (settings.llm_model and "qwen" in settings.llm_model) else "qwen/qwen-2.5-coder-32b-instruct:free"
+        model = settings.llm_model if settings.llm_model else "qwen/qwen-2.5-coder-32b-instruct:free"
         base_url = settings.llm_base_url or "https://openrouter.ai/api/v1"
 
     return provider, model, api_key, base_url

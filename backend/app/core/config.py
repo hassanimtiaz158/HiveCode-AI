@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     qwen_api_key: str = ""
     llm_model: str = ""
     llm_base_url: str = "https://openrouter.ai/api/v1"
+    groq_api_key: str = ""
 
     @model_validator(mode="after")
     def _validate_production(self):
