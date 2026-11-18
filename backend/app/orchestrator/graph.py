@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict, Literal
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
-
+from app.agents.planner import generate_plan
 from app.agents.clarifier import run_clarifier_turn
 from app.agents.router import route_intent
 from app.orchestrator.state import ProjectGraphState
@@ -96,12 +96,16 @@ async def requirements_confirm_node(state: ProjectGraphState) -> Dict[str, Any]:
 
 
 async def planner_node(state: ProjectGraphState) -> Dict[str, Any]:
-    """Generates the component hierarchy and PlanContract file list."""
-    plan = {
-        "stack": "vite-react-tailwind",
-        "files": ["data/site.json", "src/App.tsx", "src/components/Navbar.tsx", "src/components/Hero.tsx"]
-    }
-    return {"plan": plan}
+    """
+    Generates the dependency-ordered PlanContract conforming to vite-react-tailwind.
+    """
+    requirements = state.get("requirements") or {}
+    project_id = state.get("project_id", "project_default")
+    
+    plan_contract = await generate_plan(requirements=requirements, project_id=project_id)
+    logger.info(f"PlannerNode generated plan with {len(plan_contract.files)} files for project '{project_id}'")
+    
+    return {"plan": plan_contract.model_dump()}
 
 
 async def coder_node(state: ProjectGraphState) -> Dict[str, Any]:
