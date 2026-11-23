@@ -26,6 +26,7 @@ class ProjectGraphState(TypedDict):
     # Architectural Plan & Generated Code
     plan: Optional[Dict[str, Any]]
     files: Dict[str, str]  # file_path -> full_content
+    generated_files: Optional[Dict[str, str]]
     target_files: List[str]  # 1 to 3 isolated files for surgical edits
     
     # Sandbox Build & Self-Healing

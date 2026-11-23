@@ -1,7 +1,8 @@
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, Field
 
+from app.core.ws_manager import ws_manager
 from app.orchestrator.service import (
     get_project_graph_state,
     invoke_project_graph,
@@ -67,6 +68,7 @@ async def get_graph_state_endpoint(project_id: str, thread_id: str):
         raise HTTPException(status_code=404, detail="Graph thread not found")
     return {"status": "success", "snapshot": state}
 
+
 class ClarifyAnswerRequest(BaseModel):
     thread_id: Optional[str] = Field(None, description="Thread ID paused by clarifier")
     answers: Dict[str, Any] = Field(..., description="User selected answers to questions")
@@ -87,3 +89,21 @@ async def clarify_answer_endpoint(project_id: str, req: ClarifyAnswerRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Clarifier answer submission error: {str(exc)}",
         )
+
+
+@router.websocket("/ws")
+async def project_graph_ws(websocket: WebSocket, project_id: str):
+    """
+    WebSocket streaming endpoint for real-time file generation progress (Phase 10).
+    Streams events: file_generation_started, file_generation_completed, generation_finished.
+    """
+    await ws_manager.connect(websocket, project_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, project_id)
+    except Exception:
+        ws_manager.disconnect(websocket, project_id)

@@ -79,6 +79,7 @@ async def invoke_project_graph(
         "requirements_confirmed": False,
         "plan": None,
         "files": {},
+        "generated_files": None,
         "target_files": [],
         "build_result": None,
         "fix_attempts": 0,
