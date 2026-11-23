@@ -2,10 +2,14 @@ import logging
 from typing import Any, Dict, Literal
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
-from app.agents.planner import generate_plan
+
+from app.agents.coder import generate_project_files
+from app.agents.planner import generate_plan, get_fallback_plan
 from app.agents.clarifier import run_clarifier_turn
 from app.agents.router import route_intent
+from app.core.ws_manager import ws_manager
 from app.orchestrator.state import ProjectGraphState
+from contracts.plan import PlanContract
 
 logger = logging.getLogger(__name__)
 
@@ -109,12 +113,36 @@ async def planner_node(state: ProjectGraphState) -> Dict[str, Any]:
 
 
 async def coder_node(state: ProjectGraphState) -> Dict[str, Any]:
-    """Generates the code files conforming to vite-react-tailwind."""
-    files = {
-        "data/site.json": '{"title": "Welcome to our store", "cta": "Order Now"}',
-        "src/App.tsx": 'export default function App() { return <div className="p-4">Store</div>; }'
+    """
+    Sequential Coder Agent (Phase 10):
+    Generates production-ready TypeScript/React/JSON files one by one
+    based on the PlanContract, emitting real-time progress events over WebSockets.
+    """
+    plan_dict = state.get("plan") or {}
+    requirements = state.get("requirements") or {}
+    project_id = state.get("project_id", "project_default")
+
+    try:
+        plan_contract = PlanContract(**plan_dict) if plan_dict else get_fallback_plan(requirements, project_id)
+    except Exception:
+        plan_contract = get_fallback_plan(requirements, project_id)
+
+    async def broadcast_progress(event: Dict[str, Any]):
+        event["project_id"] = project_id
+        await ws_manager.broadcast_to_project(project_id, event)
+
+    logger.info(f"CoderNode starting sequential generation of {len(plan_contract.files)} files for project '{project_id}'")
+    generated_files = await generate_project_files(
+        plan=plan_contract,
+        requirements=requirements,
+        on_progress=broadcast_progress,
+    )
+    logger.info(f"CoderNode completed generation of {len(generated_files)} files for project '{project_id}'")
+
+    return {
+        "files": generated_files,
+        "generated_files": generated_files,
     }
-    return {"files": files}
 
 
 async def locator_node(state: ProjectGraphState) -> Dict[str, Any]:

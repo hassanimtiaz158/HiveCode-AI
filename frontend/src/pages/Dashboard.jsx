@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, FileCode, Layers, Loader2, LogOut, Mic, Sparkles } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { ClarifierQuestionCard } from "../components/chat/ClarifierQuestionCard";
+import { FileGenerationProgress } from "../components/chat/FileGenerationProgress";
 import { VoiceIntakeCard } from "../components/landing/VoiceIntakeCard";
 import {
   invokeProjectGraph,
@@ -28,8 +29,23 @@ export function Dashboard() {
   const [buildResult, setBuildResult] = useState(null);
   const [assistantAnswer, setAssistantAnswer] = useState("");
 
+  // Phase 10 Sequential Coder Live Progress Tracking
+  const [activeGeneratingPath, setActiveGeneratingPath] = useState("");
+  const [completedFileCount, setCompletedFileCount] = useState(0);
+  const [liveFiles, setLiveFiles] = useState([]);
+  const [liveGeneratedFiles, setLiveGeneratedFiles] = useState({});
+  const wsRef = useRef(null);
+
   const displayName = user?.full_name?.trim() || "User";
   const projectId = user?.id || "demo-project-id";
+
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
 
   async function handleLogout() {
     if (isLoggingOut) return;
@@ -97,19 +113,63 @@ export function Dashboard() {
     setIsLoading(true);
     setLoadingStage("architecting");
     setErrorMessage("");
+    setActiveGeneratingPath("data/site.json");
+    setCompletedFileCount(0);
+
+    // Default expected file tree during generation
+    setLiveFiles([
+      { path: "data/site.json", role: "content", description: "Central copy and data repository" },
+      { path: "src/components/Navbar.tsx", role: "component", description: "Responsive navigation header" },
+      { path: "src/components/Hero.tsx", role: "component", description: "High-conversion hero section" },
+      { path: "src/components/ProductCatalog.tsx", role: "component", description: "Interactive product and offerings grid" },
+      { path: "src/components/Footer.tsx", role: "component", description: "Footer with contact and hours" },
+      { path: "src/App.tsx", role: "page", description: "Root orchestrator component" },
+    ]);
+
+    // Connect WebSocket for live streaming events (Task 10.3)
+    try {
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsHost = window.location.port === "5173" ? "localhost:8000" : window.location.host;
+      const socket = new WebSocket(`${wsProtocol}//${wsHost}/api/v1/projects/${projectId}/graph/ws`);
+      wsRef.current = socket;
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.event === "file_generation_started") {
+            setActiveGeneratingPath(data.path);
+          } else if (data.event === "file_generation_completed") {
+            setCompletedFileCount((prev) => Math.max(prev + 1, data.index || 0));
+          }
+        } catch {
+          // ignore parsing error
+        }
+      };
+    } catch {
+      // WebSocket optional fallback
+    }
+
     try {
       const res = await resumeProjectGraph(projectId, true);
       const state = res.state || {};
+      const generatedCodeFiles = state.files || state.generated_files || {};
+
       setBuildResult({
         verified: state.verified,
         versionTag: state.version_tag || "v1",
         gitCommitSha: state.git_commit_sha || "main-commit",
         plan: state.plan,
+        files: generatedCodeFiles,
       });
+      setCompletedFileCount(state.plan?.files?.length || 6);
     } catch (err) {
       setErrorMessage(err?.detail || err?.message || "Failed to approve requirements.");
     } finally {
       setIsLoading(false);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     }
   }
 
@@ -120,6 +180,9 @@ export function Dashboard() {
     setBuildResult(null);
     setAssistantAnswer("");
     setErrorMessage("");
+    setActiveGeneratingPath("");
+    setCompletedFileCount(0);
+    setLiveGeneratedFiles({});
   }
 
   return (
@@ -164,7 +227,7 @@ export function Dashboard() {
             Welcome, {displayName}
           </h1>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">
-            Speak or type the website you want to build. Our AI will clarify your specifications before writing code.
+            Speak or type the website you want to build. Our AI will clarify your specifications before generating your source code.
           </p>
         </section>
 
@@ -175,42 +238,26 @@ export function Dashboard() {
         )}
 
         {buildResult ? (
-          <section className="animate-fade-rise rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-6 shadow-card backdrop-blur sm:p-8 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400">
-              <CheckCircle2 className="h-7 w-7" />
+          <section className="animate-fade-rise rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-6 shadow-card backdrop-blur sm:p-8 text-center space-y-6">
+            <div>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400">
+                <CheckCircle2 className="h-7 w-7" />
+              </div>
+              <h2 className="mt-4 text-2xl font-bold text-white">Source Code Generated & Verified!</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Requirements version {buildResult.versionTag} confirmed. Git commit: <code className="text-emerald-300 font-mono text-xs">{buildResult.gitCommitSha}</code>.
+              </p>
             </div>
-            <h2 className="mt-4 text-2xl font-bold text-white">Blueprint Approved & Build Verified!</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Requirements version {buildResult.versionTag} confirmed. Git commit: <code className="text-emerald-300 font-mono text-xs">{buildResult.gitCommitSha}</code>.
-            </p>
 
             {buildResult.plan?.files && (
-              <div className="mt-6 text-left rounded-2xl border border-white/10 bg-navy-950/60 p-4 sm:p-5">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    <FileCode className="h-4 w-4 text-brand-cyan" />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                      Architectural Plan ({buildResult.plan.stack_profile || "vite-react-tailwind"})
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400">{buildResult.plan.files.length} files planned</span>
-                </div>
-                <div className="space-y-2">
-                  {buildResult.plan.files.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start justify-between gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-xs"
-                    >
-                      <div>
-                        <span className="font-mono font-medium text-emerald-400">{file.path}</span>
-                        <p className="mt-0.5 text-slate-400">{file.description}</p>
-                      </div>
-                      <span className="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[10px] uppercase font-semibold text-slate-300">
-                        {file.role}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+              <div className="text-left">
+                <FileGenerationProgress
+                  files={buildResult.plan.files}
+                  completedCount={buildResult.plan.files.length}
+                  totalCount={buildResult.plan.files.length}
+                  generatedFiles={buildResult.files || {}}
+                  isComplete={true}
+                />
               </div>
             )}
 
@@ -239,23 +286,21 @@ export function Dashboard() {
             </section>
 
             {isLoading && (
-              <div className="flex flex-col items-center justify-center p-8 text-slate-400 space-y-4">
+              <div className="p-6">
                 {loadingStage === "architecting" ? (
-                  <div className="w-full max-w-md mx-auto space-y-3 text-center">
-                    <div className="flex items-center justify-center gap-2 text-brand-cyan">
-                      <Layers className="h-5 w-5 animate-pulse" />
-                      <span className="font-semibold text-white">Architecting site structure...</span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-brand-cyan via-brand-indigo to-brand-violet animate-pulse" />
-                    </div>
-                    <p className="text-xs text-slate-400">Synthesizing dependency-ordered file plan (vite-react-tailwind)...</p>
-                  </div>
+                  <FileGenerationProgress
+                    files={liveFiles}
+                    activePath={activeGeneratingPath}
+                    completedCount={completedFileCount}
+                    totalCount={liveFiles.length}
+                    generatedFiles={liveGeneratedFiles}
+                    isComplete={false}
+                  />
                 ) : (
-                  <>
+                  <div className="flex flex-col items-center justify-center p-8 text-slate-400 space-y-3">
                     <Loader2 className="h-8 w-8 animate-spin text-brand-cyan" />
                     <p className="text-sm">Orchestrating agents and generating requirements...</p>
-                  </>
+                  </div>
                 )}
               </div>
             )}
